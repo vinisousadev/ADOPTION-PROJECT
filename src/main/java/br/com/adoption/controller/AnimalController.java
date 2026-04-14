@@ -26,4 +26,9 @@ public class AnimalController {
         return animalService.save(animal);
     }
 
+    @GetMapping
+    public List<Animal> getAllAnimals() {
+        return animalService.getAllAnimals();
+    }
+
 }
