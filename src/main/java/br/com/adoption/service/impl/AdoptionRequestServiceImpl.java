@@ -1,0 +1,107 @@
+package br.com.adoption.service.impl;
+
+import br.com.adoption.entity.AdoptionRequest;
+import br.com.adoption.entity.AdoptionRequestStatus;
+import br.com.adoption.entity.Animal;
+import br.com.adoption.entity.User;
+import br.com.adoption.exception.AnimalNotAvailableException;
+import br.com.adoption.exception.DuplicateAdoptionRequestException;
+import br.com.adoption.exception.ResourceNotFoundException;
+import br.com.adoption.repository.AdoptionRequestRepository;
+import br.com.adoption.repository.AnimalRepository;
+import br.com.adoption.repository.UserRepository;
+import br.com.adoption.service.AdoptionRequestService;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class AdoptionRequestServiceImpl implements AdoptionRequestService {
+
+    private final AdoptionRequestRepository adoptionRequestRepository;
+    private final AnimalRepository animalRepository;
+    private final UserRepository userRepository;
+
+    public AdoptionRequestServiceImpl(AdoptionRequestRepository adoptionRequestRepository,
+                                      AnimalRepository animalRepository,
+                                      UserRepository userRepository) {
+        this.adoptionRequestRepository = adoptionRequestRepository;
+        this.animalRepository = animalRepository;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public List<AdoptionRequest> getAllRequests() {
+        return adoptionRequestRepository.findAll(Sort.by("id"));
+    }
+
+    @Override
+    public AdoptionRequest save(AdoptionRequest adoptionRequest) {
+        Animal animal = animalRepository.findById(adoptionRequest.getAnimal().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
+
+        if (!"AVAILABLE".equals(animal.getStatus())) {
+            throw new AnimalNotAvailableException("Animal is not available for adoption");
+        }
+
+        User user = userRepository.findById(adoptionRequest.getUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(
+                animal.getId(),
+                user.getId(),
+                AdoptionRequestStatus.PENDING)) {
+            throw new DuplicateAdoptionRequestException("User already has a pending request for this animal");
+        }
+
+        adoptionRequest.setAnimal(animal);
+        adoptionRequest.setUser(user);
+        adoptionRequest.setStatus(AdoptionRequestStatus.PENDING);
+        adoptionRequest.setResponseDate(null);
+
+        return adoptionRequestRepository.save(adoptionRequest);
+    }
+
+    @Override
+    public AdoptionRequest approveRequest(Long requestId, Long userId) {
+        AdoptionRequest request = adoptionRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
+
+        if (!request.getAnimal().getUser().getId().equals(userId)) {
+            throw new IllegalStateException("Only the animal owner can approve this request");
+        }
+
+        if (request.getStatus() != AdoptionRequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be approved");
+        }
+
+        request.setStatus(AdoptionRequestStatus.APPROVED);
+        request.setResponseDate(LocalDateTime.now());
+
+        Animal animal = request.getAnimal();
+        animal.setStatus("ADOPTED");
+
+        return adoptionRequestRepository.save(request);
+    }
+
+    @Override
+    public AdoptionRequest rejectRequest(Long requestId, Long userId) {
+        AdoptionRequest request = adoptionRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
+
+        if (!request.getAnimal().getUser().getId().equals(userId)) {
+            throw new IllegalStateException("Only the animal owner can reject this request");
+        }
+
+        if (request.getStatus() != AdoptionRequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be rejected");
+        }
+
+        request.setStatus(AdoptionRequestStatus.REJECTED);
+        request.setResponseDate(LocalDateTime.now());
+
+        return adoptionRequestRepository.save(request);
+    }
+}

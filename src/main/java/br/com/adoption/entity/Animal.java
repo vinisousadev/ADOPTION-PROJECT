@@ -1,5 +1,6 @@
 package br.com.adoption.entity;
-
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -65,6 +66,10 @@ public class Animal {
 
     @Column(name = "REGISTRATION_DATE", nullable = false)
     private LocalDateTime registrationDate;
+
+    @ManyToOne
+    @JoinColumn(name = "FK_USERS_ID_USER")
+    private User user;
 
     public Animal() {
     }
@@ -175,5 +180,13 @@ public class Animal {
 
     public void setRegistrationDate(LocalDateTime registrationDate) {
         this.registrationDate = registrationDate;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
