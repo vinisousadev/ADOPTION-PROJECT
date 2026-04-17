@@ -1,5 +1,5 @@
 package br.com.adoption.service.impl;
-
+import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
@@ -11,8 +11,11 @@ import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import br.com.adoption.service.AdoptionRequestService;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
+import br.com.adoption.exception.AdoptionRequestNotPendingException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +52,10 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         User user = userRepository.findById(adoptionRequest.getUser().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        if (animal.getUser() != null && animal.getUser().getId().equals(user.getId())) {
+            throw new OwnerCannotAdoptOwnAnimalException("The owner cannot create an adoption request for their own animal");
+        }
+
         if (adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(
                 animal.getId(),
                 user.getId(),
@@ -59,31 +66,49 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         adoptionRequest.setAnimal(animal);
         adoptionRequest.setUser(user);
         adoptionRequest.setStatus(AdoptionRequestStatus.PENDING);
-        adoptionRequest.setResponseDate(null);
+        adoptionRequest.setRequestDate(LocalDateTime.now());
 
         return adoptionRequestRepository.save(adoptionRequest);
     }
 
+    @Transactional
     @Override
     public AdoptionRequest approveRequest(Long requestId, Long userId) {
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
         if (!request.getAnimal().getUser().getId().equals(userId)) {
-            throw new IllegalStateException("Only the animal owner can approve this request");
+            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can approve this request");
         }
 
         if (request.getStatus() != AdoptionRequestStatus.PENDING) {
-            throw new IllegalStateException("Only pending requests can be approved");
+            throw new AdoptionRequestNotPendingException("Only pending requests can be approved");
         }
 
+        LocalDateTime now = LocalDateTime.now();
+
         request.setStatus(AdoptionRequestStatus.APPROVED);
-        request.setResponseDate(LocalDateTime.now());
+        request.setResponseDate(now);
 
         Animal animal = request.getAnimal();
         animal.setStatus("ADOPTED");
 
-        return adoptionRequestRepository.save(request);
+        animalRepository.save(animal);
+        AdoptionRequest approvedRequest = adoptionRequestRepository.save(request);
+
+        List<AdoptionRequest> pendingRequests =
+                adoptionRequestRepository.findByAnimal_IdAndStatus(animal.getId(), AdoptionRequestStatus.PENDING);
+
+        for (AdoptionRequest pendingRequest : pendingRequests) {
+            if (!pendingRequest.getId().equals(request.getId())) {
+                pendingRequest.setStatus(AdoptionRequestStatus.REJECTED);
+                pendingRequest.setResponseDate(now);
+                adoptionRequestRepository.save(pendingRequest);
+            }
+        }
+
+        return approvedRequest;
+
     }
 
     @Override
@@ -92,11 +117,11 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
         if (!request.getAnimal().getUser().getId().equals(userId)) {
-            throw new IllegalStateException("Only the animal owner can reject this request");
+            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can reject this request");
         }
 
         if (request.getStatus() != AdoptionRequestStatus.PENDING) {
-            throw new IllegalStateException("Only pending requests can be rejected");
+            throw new AdoptionRequestNotPendingException("Only pending requests can be rejected");
         }
 
         request.setStatus(AdoptionRequestStatus.REJECTED);
