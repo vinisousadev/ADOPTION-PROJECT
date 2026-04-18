@@ -1,21 +1,26 @@
 package br.com.adoption.service.impl;
-import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
+
+import br.com.adoption.dto.request.CreateAdoptionRequest;
+import br.com.adoption.dto.request.UpdateRequestStatusRequest;
+import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
 import br.com.adoption.entity.User;
+import br.com.adoption.exception.AdoptionRequestNotPendingException;
 import br.com.adoption.exception.AnimalNotAvailableException;
 import br.com.adoption.exception.DuplicateAdoptionRequestException;
+import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
+import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
 import br.com.adoption.exception.ResourceNotFoundException;
+import br.com.adoption.mapper.AdoptionRequestMapper;
 import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import br.com.adoption.service.AdoptionRequestService;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
-import br.com.adoption.exception.AdoptionRequestNotPendingException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,20 +41,20 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     }
 
     @Override
-    public List<AdoptionRequest> getAllRequests() {
-        return adoptionRequestRepository.findAll(Sort.by("id"));
+    public List<AdoptionRequestResponse> getAllRequests() {
+        return AdoptionRequestMapper.toResponseList(adoptionRequestRepository.findAll(Sort.by("id")));
     }
 
     @Override
-    public AdoptionRequest save(AdoptionRequest adoptionRequest) {
-        Animal animal = animalRepository.findById(adoptionRequest.getAnimal().getId())
+    public AdoptionRequestResponse save(CreateAdoptionRequest request) {
+        Animal animal = animalRepository.findById(request.getAnimalId())
                 .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
 
         if (!"AVAILABLE".equals(animal.getStatus())) {
             throw new AnimalNotAvailableException("Animal is not available for adoption");
         }
 
-        User user = userRepository.findById(adoptionRequest.getUser().getId())
+        User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (animal.getUser() != null && animal.getUser().getId().equals(user.getId())) {
@@ -63,17 +68,21 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             throw new DuplicateAdoptionRequestException("User already has a pending request for this animal");
         }
 
+        AdoptionRequest adoptionRequest = AdoptionRequestMapper.toEntity(request);
         adoptionRequest.setAnimal(animal);
         adoptionRequest.setUser(user);
         adoptionRequest.setStatus(AdoptionRequestStatus.PENDING);
         adoptionRequest.setRequestDate(LocalDateTime.now());
 
-        return adoptionRequestRepository.save(adoptionRequest);
+        AdoptionRequest savedRequest = adoptionRequestRepository.save(adoptionRequest);
+        return AdoptionRequestMapper.toResponse(savedRequest);
     }
 
     @Transactional
     @Override
-    public AdoptionRequest approveRequest(Long requestId, Long userId) {
+    public AdoptionRequestResponse approveRequest(Long requestId, UpdateRequestStatusRequest requestDto) {
+        Long userId = requestDto.getUserId();
+
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
@@ -107,12 +116,13 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             }
         }
 
-        return approvedRequest;
-
+        return AdoptionRequestMapper.toResponse(approvedRequest);
     }
 
     @Override
-    public AdoptionRequest rejectRequest(Long requestId, Long userId) {
+    public AdoptionRequestResponse rejectRequest(Long requestId, UpdateRequestStatusRequest requestDto) {
+        Long userId = requestDto.getUserId();
+
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
@@ -127,6 +137,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         request.setStatus(AdoptionRequestStatus.REJECTED);
         request.setResponseDate(LocalDateTime.now());
 
-        return adoptionRequestRepository.save(request);
+        AdoptionRequest rejectedRequest = adoptionRequestRepository.save(request);
+        return AdoptionRequestMapper.toResponse(rejectedRequest);
     }
 }

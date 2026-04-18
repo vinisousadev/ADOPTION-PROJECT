@@ -1,7 +1,9 @@
 package br.com.adoption.controller;
 
-import br.com.adoption.entity.AnimalPhoto;
+import br.com.adoption.dto.request.CreateAnimalPhotoRequest;
+import br.com.adoption.dto.response.AnimalPhotoResponse;
 import br.com.adoption.service.AnimalPhotoService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +19,12 @@ public class AnimalPhotoController {
     }
 
     @GetMapping
-    public List<AnimalPhoto> getAllPhotos() {
+    public List<AnimalPhotoResponse> getAllPhotos() {
         return animalPhotoService.getAllPhotos();
     }
 
     @PostMapping
-    public AnimalPhoto createPhoto(@RequestBody AnimalPhoto animalPhoto) {
-        return animalPhotoService.save(animalPhoto);
+    public AnimalPhotoResponse createPhoto(@Valid @RequestBody CreateAnimalPhotoRequest request) {
+        return animalPhotoService.save(request);
     }
 }

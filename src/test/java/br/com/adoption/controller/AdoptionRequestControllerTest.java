@@ -1,227 +1,216 @@
 package br.com.adoption.controller;
 
-import br.com.adoption.entity.AdoptionRequest;
+import br.com.adoption.dto.request.CreateAdoptionRequest;
+import br.com.adoption.dto.request.UpdateRequestStatusRequest;
+import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequestStatus;
-import br.com.adoption.entity.Animal;
-import br.com.adoption.entity.User;
+import br.com.adoption.exception.AdoptionRequestNotPendingException;
+import br.com.adoption.exception.DuplicateAdoptionRequestException;
 import br.com.adoption.exception.GlobalExceptionHandler;
-import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
-import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
 import br.com.adoption.service.AdoptionRequestService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.lang.reflect.Field;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(AdoptionRequestController.class)
+@Import(GlobalExceptionHandler.class)
 class AdoptionRequestControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
     private AdoptionRequestService adoptionRequestService;
 
-    @InjectMocks
-    private AdoptionRequestController adoptionRequestController;
-
-    private MockMvc mockMvc;
-    private ObjectMapper objectMapper;
-
-    @BeforeEach
-    void setup() {
-        mockMvc = MockMvcBuilders
-                .standaloneSetup(adoptionRequestController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
-
-        objectMapper = new ObjectMapper();
-        objectMapper.findAndRegisterModules();
-    }
-
     @Test
-    void shouldReturnAllAdoptionRequests() throws Exception {
-        AdoptionRequest request1 = new AdoptionRequest();
-        request1.setMessage("First request");
+    void shouldReturnAllRequests() throws Exception {
+        AdoptionRequestResponse request1 = new AdoptionRequestResponse();
+        request1.setMessage("Request 1");
         request1.setStatus(AdoptionRequestStatus.PENDING);
 
-        AdoptionRequest request2 = new AdoptionRequest();
-        request2.setMessage("Second request");
+        AdoptionRequestResponse request2 = new AdoptionRequestResponse();
+        request2.setMessage("Request 2");
         request2.setStatus(AdoptionRequestStatus.APPROVED);
 
         when(adoptionRequestService.getAllRequests()).thenReturn(List.of(request1, request2));
 
         mockMvc.perform(get("/adoption-requests"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].message").value("First request"))
-                .andExpect(jsonPath("$[0].status").value("PENDING"))
-                .andExpect(jsonPath("$[1].message").value("Second request"))
-                .andExpect(jsonPath("$[1].status").value("APPROVED"));
-
-        verify(adoptionRequestService, times(1)).getAllRequests();
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].message").value("Request 1"))
+                .andExpect(jsonPath("$[1].message").value("Request 2"));
     }
 
     @Test
-    void shouldCreateAdoptionRequest() throws Exception {
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+    void shouldCreateRequestSuccessfully() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setMessage("I want to adopt Nina");
+        response.setStatus(AdoptionRequestStatus.PENDING);
+        response.setAnimalId(10L);
+        response.setUserId(2L);
 
-        Animal animal = new Animal();
-        setId(animal, 10L);
+        when(adoptionRequestService.save(any(CreateAdoptionRequest.class))).thenReturn(response);
 
-        AdoptionRequest requestBody = new AdoptionRequest();
-        requestBody.setMessage("I want to adopt Bob");
-        requestBody.setAnimal(animal);
-        requestBody.setUser(adopter);
-
-        AdoptionRequest savedRequest = new AdoptionRequest();
-        setId(savedRequest, 100L);
-        savedRequest.setMessage("I want to adopt Bob");
-        savedRequest.setStatus(AdoptionRequestStatus.PENDING);
-        savedRequest.setRequestDate(LocalDateTime.now());
-        savedRequest.setResponseDate(null);
-        savedRequest.setAnimal(animal);
-        savedRequest.setUser(adopter);
-
-        when(adoptionRequestService.save(any(AdoptionRequest.class))).thenReturn(savedRequest);
+        String requestBody = """
+                {
+                  "message": "I want to adopt Nina",
+                  "animalId": 10,
+                  "userId": 2
+                }
+                """;
 
         mockMvc.perform(post("/adoption-requests")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestBody)))
+                        .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message").value("I want to adopt Bob"))
-                .andExpect(jsonPath("$.status").value("PENDING"));
-
-        verify(adoptionRequestService, times(1)).save(any(AdoptionRequest.class));
+                .andExpect(jsonPath("$.message").value("I want to adopt Nina"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.animalId").value(10))
+                .andExpect(jsonPath("$.userId").value(2));
     }
 
     @Test
-    void shouldReturnConflictWhenOwnerTriesToCreateOwnAdoptionRequest() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
+    void shouldReturnConflictWhenCreatingDuplicateRequest() throws Exception {
+        when(adoptionRequestService.save(any(CreateAdoptionRequest.class)))
+                .thenThrow(new DuplicateAdoptionRequestException("User already has a pending request for this animal"));
 
-        Animal animal = new Animal();
-        setId(animal, 10L);
-
-        AdoptionRequest requestBody = new AdoptionRequest();
-        requestBody.setMessage("I want to adopt my own animal");
-        requestBody.setAnimal(animal);
-        requestBody.setUser(owner);
-
-        when(adoptionRequestService.save(any(AdoptionRequest.class)))
-                .thenThrow(new OwnerCannotAdoptOwnAnimalException(
-                        "The owner cannot create an adoption request for their own animal"
-                ));
+        String requestBody = """
+                {
+                  "message": "I want to adopt Nina",
+                  "animalId": 10,
+                  "userId": 2
+                }
+                """;
 
         mockMvc.perform(post("/adoption-requests")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestBody)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message")
-                        .value("The owner cannot create an adoption request for their own animal"));
-
-        verify(adoptionRequestService, times(1)).save(any(AdoptionRequest.class));
+                        .content(requestBody))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void shouldApproveAdoptionRequest() throws Exception {
-        AdoptionRequest approvedRequest = new AdoptionRequest();
-        setId(approvedRequest, 100L);
-        approvedRequest.setMessage("I want to adopt Bob");
-        approvedRequest.setStatus(AdoptionRequestStatus.APPROVED);
-        approvedRequest.setRequestDate(LocalDateTime.now().minusDays(1));
-        approvedRequest.setResponseDate(LocalDateTime.now());
+    void shouldApproveRequestSuccessfully() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setStatus(AdoptionRequestStatus.APPROVED);
 
-        when(adoptionRequestService.approveRequest(100L, 1L)).thenReturn(approvedRequest);
+        when(adoptionRequestService.approveRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+                .thenReturn(response);
 
-        mockMvc.perform(patch("/adoption-requests/100/approve")
-                        .param("userId", "1"))
+        String requestBody = """
+                {
+                  "userId": 1
+                }
+                """;
+
+        mockMvc.perform(patch("/adoption-requests/20/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value("APPROVED"))
-                .andExpect(jsonPath("$.message").value("I want to adopt Bob"));
-
-        verify(adoptionRequestService, times(1)).approveRequest(100L, 1L);
+                .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
     @Test
-    void shouldReturnConflictWhenNonOwnerTriesToApproveRequest() throws Exception {
-        when(adoptionRequestService.approveRequest(100L, 3L))
-                .thenThrow(new OnlyOwnerCanManageAdoptionRequestException(
-                        "Only the animal owner can approve this request"
-                ));
+    void shouldReturnConflictWhenApprovingInvalidRequest() throws Exception {
+        when(adoptionRequestService.approveRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+                .thenThrow(new AdoptionRequestNotPendingException("Only pending requests can be approved"));
 
-        mockMvc.perform(patch("/adoption-requests/100/approve")
-                        .param("userId", "3"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message")
-                        .value("Only the animal owner can approve this request"));
+        String requestBody = """
+                {
+                  "userId": 1
+                }
+                """;
 
-        verify(adoptionRequestService, times(1)).approveRequest(100L, 3L);
+        mockMvc.perform(patch("/adoption-requests/20/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void shouldRejectAdoptionRequest() throws Exception {
-        AdoptionRequest rejectedRequest = new AdoptionRequest();
-        setId(rejectedRequest, 100L);
-        rejectedRequest.setMessage("I want to adopt Bob");
-        rejectedRequest.setStatus(AdoptionRequestStatus.REJECTED);
-        rejectedRequest.setRequestDate(LocalDateTime.now().minusDays(1));
-        rejectedRequest.setResponseDate(LocalDateTime.now());
+    void shouldRejectRequestSuccessfully() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setStatus(AdoptionRequestStatus.REJECTED);
 
-        when(adoptionRequestService.rejectRequest(100L, 1L)).thenReturn(rejectedRequest);
+        when(adoptionRequestService.rejectRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+                .thenReturn(response);
 
-        mockMvc.perform(patch("/adoption-requests/100/reject")
-                        .param("userId", "1"))
+        String requestBody = """
+                {
+                  "userId": 1
+                }
+                """;
+
+        mockMvc.perform(patch("/adoption-requests/20/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value("REJECTED"))
-                .andExpect(jsonPath("$.message").value("I want to adopt Bob"));
-
-        verify(adoptionRequestService, times(1)).rejectRequest(100L, 1L);
+                .andExpect(jsonPath("$.status").value("REJECTED"));
     }
 
     @Test
-    void shouldReturnConflictWhenNonOwnerTriesToRejectRequest() throws Exception {
-        when(adoptionRequestService.rejectRequest(100L, 3L))
-                .thenThrow(new OnlyOwnerCanManageAdoptionRequestException(
-                        "Only the animal owner can reject this request"
-                ));
+    void shouldReturnConflictWhenRejectingInvalidRequest() throws Exception {
+        when(adoptionRequestService.rejectRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+                .thenThrow(new AdoptionRequestNotPendingException("Only pending requests can be rejected"));
 
-        mockMvc.perform(patch("/adoption-requests/100/reject")
-                        .param("userId", "3"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message")
-                        .value("Only the animal owner can reject this request"));
+        String requestBody = """
+                {
+                  "userId": 1
+                }
+                """;
 
-        verify(adoptionRequestService, times(1)).rejectRequest(100L, 3L);
+        mockMvc.perform(patch("/adoption-requests/20/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isConflict());
     }
+    @Test
+    void shouldReturnBadRequestWhenCreateAdoptionRequestIsInvalid() throws Exception {
+        String longMessage = "x".repeat(501);
 
-    private void setId(Object obj, Long idValue) throws Exception {
-        Field field = obj.getClass().getDeclaredField("id");
-        field.setAccessible(true);
-        field.set(obj, idValue);
+        String requestBody = """
+            {
+              "message": "%s",
+              "animalId": 0,
+              "userId": 0
+            }
+            """.formatted(longMessage);
+
+        mockMvc.perform(post("/adoption-requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fields.message").exists())
+                .andExpect(jsonPath("$.fields.animalId").exists())
+                .andExpect(jsonPath("$.fields.userId").exists());
+    }
+    @Test
+    void shouldReturnBadRequestWhenUpdateRequestStatusIsInvalid() throws Exception {
+        String requestBody = """
+            {
+              "userId": 0
+            }
+            """;
+
+        mockMvc.perform(patch("/adoption-requests/20/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fields.userId").exists());
     }
 }

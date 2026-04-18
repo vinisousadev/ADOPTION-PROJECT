@@ -1,33 +1,33 @@
 package br.com.adoption.service.impl;
 
+import br.com.adoption.dto.request.CreateAdoptionRequest;
+import br.com.adoption.dto.request.UpdateRequestStatusRequest;
+import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
+import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
 import br.com.adoption.entity.User;
+import br.com.adoption.exception.AdoptionRequestNotPendingException;
+import br.com.adoption.exception.AnimalNotAvailableException;
+import br.com.adoption.exception.DuplicateAdoptionRequestException;
+import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
 import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
 import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import br.com.adoption.entity.AdoptionRequestStatus;
-import br.com.adoption.exception.DuplicateAdoptionRequestException;
-import br.com.adoption.exception.AnimalNotAvailableException;
-import br.com.adoption.exception.OnlyOwnerCanManageAdoptionRequestException;
-import br.com.adoption.exception.AdoptionRequestNotPendingException;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import java.lang.reflect.Field;
-import java.util.Optional;
-import java.util.List;
+import org.springframework.data.domain.Sort;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AdoptionRequestServiceImplTest {
@@ -45,347 +45,315 @@ class AdoptionRequestServiceImplTest {
     private AdoptionRequestServiceImpl adoptionRequestService;
 
     @Test
-    void shouldThrowExceptionWhenOwnerTriesToAdoptOwnAnimal() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
+    void shouldReturnAllRequestsOrderedById() {
+        AdoptionRequest request1 = new AdoptionRequest();
+        request1.setMessage("Request 1");
+        request1.setStatus(AdoptionRequestStatus.PENDING);
 
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Thor");
+        AdoptionRequest request2 = new AdoptionRequest();
+        request2.setMessage("Request 2");
+        request2.setStatus(AdoptionRequestStatus.APPROVED);
+
+        when(adoptionRequestRepository.findAll(Sort.by("id"))).thenReturn(List.of(request1, request2));
+
+        List<AdoptionRequestResponse> result = adoptionRequestService.getAllRequests();
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Request 1", result.get(0).getMessage());
+        assertEquals("Request 2", result.get(1).getMessage());
+
+        verify(adoptionRequestRepository, times(1)).findAll(Sort.by("id"));
+    }
+
+    @Test
+    void shouldSaveValidRequestWithPendingStatus() {
+        CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
+        requestDto.setMessage("I want to adopt Nina");
+        requestDto.setAnimalId(10L);
+        requestDto.setUserId(2L);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
         animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
-        AdoptionRequest request = new AdoptionRequest();
-        request.setAnimal(animal);
-        request.setUser(owner);
+        when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(requester));
+        when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(10L, 2L, AdoptionRequestStatus.PENDING))
+                .thenReturn(false);
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdoptionRequestResponse result = adoptionRequestService.save(requestDto);
+
+        ArgumentCaptor<AdoptionRequest> captor = ArgumentCaptor.forClass(AdoptionRequest.class);
+        verify(adoptionRequestRepository, times(1)).save(captor.capture());
+
+        AdoptionRequest savedRequest = captor.getValue();
+
+        assertNotNull(result);
+        assertEquals("I want to adopt Nina", result.getMessage());
+        assertEquals(AdoptionRequestStatus.PENDING, result.getStatus());
+        assertEquals(10L, result.getAnimalId());
+        assertEquals(2L, result.getUserId());
+        assertNull(result.getResponseDate());
+        assertNotNull(result.getRequestDate());
+
+        assertEquals("I want to adopt Nina", savedRequest.getMessage());
+        assertEquals(AdoptionRequestStatus.PENDING, savedRequest.getStatus());
+        assertNotNull(savedRequest.getRequestDate());
+        assertEquals(animal, savedRequest.getAnimal());
+        assertEquals(requester, savedRequest.getUser());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOwnerTriesToAdoptOwnAnimal() {
+        CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
+        requestDto.setAnimalId(10L);
+        requestDto.setUserId(1L);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        Animal animal = new Animal();
+        animal.setStatus("AVAILABLE");
+        animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 
-        assertThrows(
+        OwnerCannotAdoptOwnAnimalException exception = assertThrows(
                 OwnerCannotAdoptOwnAnimalException.class,
-                () -> adoptionRequestService.save(request)
+                () -> adoptionRequestService.save(requestDto)
         );
-    }
 
-    private void setId(Object obj, Long idValue) throws Exception {
-        Field field = obj.getClass().getDeclaredField("id");
-        field.setAccessible(true);
-        field.set(obj, idValue);
+        assertEquals("The owner cannot create an adoption request for their own animal", exception.getMessage());
+        verify(adoptionRequestRepository, never()).save(any(AdoptionRequest.class));
     }
 
     @Test
-    void shouldThrowExceptionWhenUserAlreadyHasPendingRequestForSameAnimal() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
+    void shouldThrowExceptionWhenDuplicatePendingRequestExists() {
+        CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
+        requestDto.setAnimalId(10L);
+        requestDto.setUserId(2L);
 
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Thor");
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
         animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
-        AdoptionRequest request = new AdoptionRequest();
-        request.setAnimal(animal);
-        request.setUser(adopter);
-
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(adopter));
-        when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(
-                10L, 2L, AdoptionRequestStatus.PENDING
-        )).thenReturn(true);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(requester));
+        when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(10L, 2L, AdoptionRequestStatus.PENDING))
+                .thenReturn(true);
 
-        assertThrows(
+        DuplicateAdoptionRequestException exception = assertThrows(
                 DuplicateAdoptionRequestException.class,
-                () -> adoptionRequestService.save(request)
+                () -> adoptionRequestService.save(requestDto)
         );
+
+        assertEquals("User already has a pending request for this animal", exception.getMessage());
+        verify(adoptionRequestRepository, never()).save(any(AdoptionRequest.class));
     }
 
     @Test
-    void shouldThrowExceptionWhenAnimalIsNotAvailable() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
-
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+    void shouldThrowExceptionWhenAnimalIsNotAvailable() {
+        CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
+        requestDto.setAnimalId(10L);
+        requestDto.setUserId(2L);
 
         Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Thor");
         animal.setStatus("ADOPTED");
-        animal.setUser(owner);
-
-        AdoptionRequest request = new AdoptionRequest();
-        request.setAnimal(animal);
-        request.setUser(adopter);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
 
-        assertThrows(
+        AnimalNotAvailableException exception = assertThrows(
                 AnimalNotAvailableException.class,
-                () -> adoptionRequestService.save(request)
+                () -> adoptionRequestService.save(requestDto)
         );
+
+        assertEquals("Animal is not available for adoption", exception.getMessage());
+        verify(userRepository, never()).findById(anyLong());
+        verify(adoptionRequestRepository, never()).save(any(AdoptionRequest.class));
     }
+
     @Test
-    void shouldThrowExceptionWhenNonOwnerTriesToApproveRequest() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
+    void shouldThrowExceptionWhenNonOwnerTriesToApprove() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(99L);
 
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
-
-        User anotherUser = new User();
-        setId(anotherUser, 3L);
-        anotherUser.setName("Bruno Adopter");
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
         Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
         AdoptionRequest request = new AdoptionRequest();
-        setId(request, 100L);
         request.setAnimal(animal);
-        request.setUser(adopter);
         request.setStatus(AdoptionRequestStatus.PENDING);
 
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
-        assertThrows(
+        OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
                 OnlyOwnerCanManageAdoptionRequestException.class,
-                () -> adoptionRequestService.approveRequest(100L, 3L)
+                () -> adoptionRequestService.approveRequest(20L, requestDto)
         );
-    }
-    @Test
-    void shouldThrowExceptionWhenTryingToApproveRequestThatIsNotPending() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
 
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+        assertEquals("Only the animal owner can approve this request", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenApprovingNonPendingRequest() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(1L);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
         Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
         AdoptionRequest request = new AdoptionRequest();
-        setId(request, 100L);
         request.setAnimal(animal);
-        request.setUser(adopter);
-        request.setStatus(AdoptionRequestStatus.APPROVED);
-
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(request));
-
-        assertThrows(
-                AdoptionRequestNotPendingException.class,
-                () -> adoptionRequestService.approveRequest(100L, 1L)
-        );
-    }
-    @Test
-    void shouldApproveRequestAndRejectOtherPendingRequestsForSameAnimal() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
-
-        User adopter1 = new User();
-        setId(adopter1, 2L);
-        adopter1.setName("Ana Adopter");
-
-        User adopter2 = new User();
-        setId(adopter2, 3L);
-        adopter2.setName("Bruno Adopter");
-
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
-        animal.setUser(owner);
-
-        AdoptionRequest requestToApprove = new AdoptionRequest();
-        setId(requestToApprove, 100L);
-        requestToApprove.setAnimal(animal);
-        requestToApprove.setUser(adopter1);
-        requestToApprove.setStatus(AdoptionRequestStatus.PENDING);
-
-        AdoptionRequest otherPendingRequest = new AdoptionRequest();
-        setId(otherPendingRequest, 101L);
-        otherPendingRequest.setAnimal(animal);
-        otherPendingRequest.setUser(adopter2);
-        otherPendingRequest.setStatus(AdoptionRequestStatus.PENDING);
-
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(requestToApprove));
-        when(adoptionRequestRepository.save(any(AdoptionRequest.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        when(animalRepository.save(any(Animal.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        when(adoptionRequestRepository.findByAnimal_IdAndStatus(10L, AdoptionRequestStatus.PENDING))
-                .thenReturn(List.of(otherPendingRequest));
-
-        AdoptionRequest result = adoptionRequestService.approveRequest(100L, 1L);
-
-        assertEquals(AdoptionRequestStatus.APPROVED, result.getStatus());
-        assertNotNull(result.getResponseDate());
-
-        assertEquals("ADOPTED", animal.getStatus());
-
-        assertEquals(AdoptionRequestStatus.REJECTED, otherPendingRequest.getStatus());
-        assertNotNull(otherPendingRequest.getResponseDate());
-
-        verify(animalRepository, times(1)).save(animal);
-        verify(adoptionRequestRepository, times(2)).save(any(AdoptionRequest.class));
-    }
-    @Test
-    void shouldThrowExceptionWhenNonOwnerTriesToRejectRequest() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
-
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
-
-        User anotherUser = new User();
-        setId(anotherUser, 3L);
-        anotherUser.setName("Bruno Adopter");
-
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
-        animal.setUser(owner);
-
-        AdoptionRequest request = new AdoptionRequest();
-        setId(request, 100L);
-        request.setAnimal(animal);
-        request.setUser(adopter);
-        request.setStatus(AdoptionRequestStatus.PENDING);
-
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(request));
-
-        assertThrows(
-                OnlyOwnerCanManageAdoptionRequestException.class,
-                () -> adoptionRequestService.rejectRequest(100L, 3L)
-        );
-    }
-    @Test
-    void shouldThrowExceptionWhenTryingToRejectRequestThatIsNotPending() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
-
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
-
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
-        animal.setUser(owner);
-
-        AdoptionRequest request = new AdoptionRequest();
-        setId(request, 100L);
-        request.setAnimal(animal);
-        request.setUser(adopter);
         request.setStatus(AdoptionRequestStatus.REJECTED);
 
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
-        assertThrows(
+        AdoptionRequestNotPendingException exception = assertThrows(
                 AdoptionRequestNotPendingException.class,
-                () -> adoptionRequestService.rejectRequest(100L, 1L)
+                () -> adoptionRequestService.approveRequest(20L, requestDto)
         );
+
+        assertEquals("Only pending requests can be approved", exception.getMessage());
     }
+
     @Test
-    void shouldRejectRequestAndKeepAnimalStatusUnchanged() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
+    void shouldApproveRequestAndRejectOtherPendingRequests() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(1L);
 
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
-        Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
         animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
+        AdoptionRequest approvedRequest = spy(new AdoptionRequest());
+        doReturn(20L).when(approvedRequest).getId();
+        approvedRequest.setAnimal(animal);
+        approvedRequest.setStatus(AdoptionRequestStatus.PENDING);
+
+        AdoptionRequest pendingRequest = spy(new AdoptionRequest());
+        doReturn(21L).when(pendingRequest).getId();
+        pendingRequest.setAnimal(animal);
+        pendingRequest.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(approvedRequest));
+        when(animalRepository.save(any(Animal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.findByAnimal_IdAndStatus(10L, AdoptionRequestStatus.PENDING))
+                .thenReturn(List.of(approvedRequest, pendingRequest));
+
+        AdoptionRequestResponse result = adoptionRequestService.approveRequest(20L, requestDto);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.APPROVED, result.getStatus());
+        assertNotNull(result.getResponseDate());
+        assertEquals("ADOPTED", animal.getStatus());
+        assertEquals(AdoptionRequestStatus.REJECTED, pendingRequest.getStatus());
+        assertNotNull(pendingRequest.getResponseDate());
+
+        verify(animalRepository, times(1)).save(animal);
+        verify(adoptionRequestRepository, atLeast(2)).save(any(AdoptionRequest.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNonOwnerTriesToReject() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(99L);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        Animal animal = new Animal();
+        animal.setUser(owner);
+
         AdoptionRequest request = new AdoptionRequest();
-        setId(request, 100L);
         request.setAnimal(animal);
-        request.setUser(adopter);
         request.setStatus(AdoptionRequestStatus.PENDING);
 
-        when(adoptionRequestRepository.findById(100L)).thenReturn(Optional.of(request));
-        when(adoptionRequestRepository.save(any(AdoptionRequest.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
-        AdoptionRequest result = adoptionRequestService.rejectRequest(100L, 1L);
+        OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
+                OnlyOwnerCanManageAdoptionRequestException.class,
+                () -> adoptionRequestService.rejectRequest(20L, requestDto)
+        );
 
-        assertEquals(AdoptionRequestStatus.REJECTED, result.getStatus());
-        assertNotNull(result.getResponseDate());
-
-        assertEquals("AVAILABLE", animal.getStatus());
-
-        verify(adoptionRequestRepository, times(1)).save(request);
+        assertEquals("Only the animal owner can reject this request", exception.getMessage());
     }
 
     @Test
-    void shouldSaveAdoptionRequestWithPendingStatusAndGeneratedRequestDate() throws Exception {
-        User owner = new User();
-        setId(owner, 1L);
-        owner.setName("Carlos Owner");
+    void shouldThrowExceptionWhenRejectingNonPendingRequest() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(1L);
 
-        User adopter = new User();
-        setId(adopter, 2L);
-        adopter.setName("Ana Adopter");
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
         Animal animal = new Animal();
-        setId(animal, 10L);
-        animal.setAnimalName("Bob");
-        animal.setStatus("AVAILABLE");
         animal.setUser(owner);
 
         AdoptionRequest request = new AdoptionRequest();
         request.setAnimal(animal);
-        request.setUser(adopter);
-        request.setMessage("I want to adopt Bob");
+        request.setStatus(AdoptionRequestStatus.APPROVED);
 
-        when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(adopter));
-        when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(
-                10L, 2L, AdoptionRequestStatus.PENDING
-        )).thenReturn(false);
-        when(adoptionRequestRepository.save(any(AdoptionRequest.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
-        AdoptionRequest result = adoptionRequestService.save(request);
+        AdoptionRequestNotPendingException exception = assertThrows(
+                AdoptionRequestNotPendingException.class,
+                () -> adoptionRequestService.rejectRequest(20L, requestDto)
+        );
 
-        assertEquals(AdoptionRequestStatus.PENDING, result.getStatus());
-        assertNotNull(result.getRequestDate());
-        assertEquals(null, result.getResponseDate());
+        assertEquals("Only pending requests can be rejected", exception.getMessage());
+    }
+    @Test
+    void shouldRejectPendingRequest() {
+        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
+        requestDto.setUserId(1L);
 
-        assertEquals(animal, result.getAnimal());
-        assertEquals(adopter, result.getUser());
-        assertEquals("I want to adopt Bob", result.getMessage());
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
 
+        Animal animal = new Animal();
+        animal.setUser(owner);
+
+        AdoptionRequest request = spy(new AdoptionRequest());
+        doReturn(20L).when(request).getId();
+        request.setAnimal(animal);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdoptionRequestResponse result = adoptionRequestService.rejectRequest(20L, requestDto);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.REJECTED, result.getStatus());
+        assertNotNull(result.getResponseDate());
         verify(adoptionRequestRepository, times(1)).save(request);
     }
 }

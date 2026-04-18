@@ -1,10 +1,11 @@
 package br.com.adoption.service;
 
-import br.com.adoption.entity.User;
+import br.com.adoption.dto.request.CreateUserRequest;
+import br.com.adoption.dto.response.UserResponse;
 
 import java.util.List;
 
 public interface UserService {
-    List<User> getAllUsers();
-    User save(User user);
+    List<UserResponse> getAllUsers();
+    UserResponse save(CreateUserRequest request);
 }

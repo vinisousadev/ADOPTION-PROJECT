@@ -1,7 +1,9 @@
 package br.com.adoption.controller;
 
-import br.com.adoption.entity.User;
+import br.com.adoption.dto.request.CreateUserRequest;
+import br.com.adoption.dto.response.UserResponse;
 import br.com.adoption.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +19,12 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.save(user);
+    public UserResponse createUser(@Valid @RequestBody CreateUserRequest request) {
+        return userService.save(request);
     }
 }

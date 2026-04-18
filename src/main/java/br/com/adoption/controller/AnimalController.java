@@ -1,7 +1,9 @@
 package br.com.adoption.controller;
 
-import br.com.adoption.entity.Animal;
+import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.service.AnimalService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,18 +19,17 @@ public class AnimalController {
     }
 
     @GetMapping("/available")
-    public List<Animal> getAvailableAnimals() {
+    public List<AnimalResponse> getAvailableAnimals() {
         return animalService.getAvailableAnimals();
     }
 
     @PostMapping
-    public Animal createAnimal(@RequestBody Animal animal) {
-        return animalService.save(animal);
+    public AnimalResponse createAnimal(@Valid @RequestBody CreateAnimalRequest request) {
+        return animalService.save(request);
     }
 
     @GetMapping
-    public List<Animal> getAllAnimals() {
+    public List<AnimalResponse> getAllAnimals() {
         return animalService.getAllAnimals();
     }
-
 }
