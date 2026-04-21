@@ -4,10 +4,14 @@ import br.com.adoption.dto.request.CreateAnimalPhotoRequest;
 import br.com.adoption.dto.response.AnimalPhotoResponse;
 import br.com.adoption.exception.GlobalExceptionHandler;
 import br.com.adoption.exception.ResourceNotFoundException;
+import br.com.adoption.security.JwtAuthenticationFilter;
 import br.com.adoption.service.AnimalPhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,7 +25,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AnimalPhotoController.class)
+@WebMvcTest(
+        controllers = AnimalPhotoController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthenticationFilter.class
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
 class AnimalPhotoControllerTest {
 

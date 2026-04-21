@@ -16,7 +16,6 @@ public class UserMapper {
         user.setEmail(request.getEmail());
         user.setCity(request.getCity());
         user.setState(request.getState());
-        user.setRegistrationDate(request.getRegistrationDate());
         user.setPasswordHash(request.getPasswordHash());
         return user;
     }

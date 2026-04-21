@@ -65,7 +65,6 @@ class UserServiceImplTest {
         request.setEmail("carlos@email.com");
         request.setCity("Joao Pessoa");
         request.setState("PB");
-        request.setRegistrationDate(LocalDateTime.now());
         request.setPasswordHash("123456");
 
         when(passwordEncoder.encode("123456")).thenReturn("encoded-password");
@@ -88,6 +87,7 @@ class UserServiceImplTest {
         assertEquals("12345678900", capturedUser.getCpf());
         assertEquals("encoded-password", capturedUser.getPasswordHash());
         assertEquals(UserType.COMMON, capturedUser.getUserType());
+        assertNotNull(capturedUser.getRegistrationDate());
 
         verify(passwordEncoder, times(1)).encode("123456");
     }

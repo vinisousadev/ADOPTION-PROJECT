@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,6 +36,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse save(CreateUserRequest request) {
         User user = UserMapper.toEntity(request);
 
+        user.setRegistrationDate(LocalDateTime.now());
         user.setPasswordHash(passwordEncoder.encode(request.getPasswordHash()));
         user.setUserType(UserType.COMMON);
 

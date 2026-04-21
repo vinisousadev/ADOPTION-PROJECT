@@ -1,12 +1,12 @@
 package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.request.UpdateRequestStatusRequest;
 import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.exception.AdoptionRequestNotPendingException;
 import br.com.adoption.exception.DuplicateAdoptionRequestException;
 import br.com.adoption.exception.GlobalExceptionHandler;
+import br.com.adoption.security.JwtAuthenticationFilter;
 import br.com.adoption.service.AdoptionRequestService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,19 +15,33 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
+
+
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AdoptionRequestController.class)
+@WebMvcTest(
+        controllers = AdoptionRequestController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthenticationFilter.class
+        )
+)
 @Import(GlobalExceptionHandler.class)
+@WithMockUser
 class AdoptionRequestControllerTest {
 
     @Autowired
@@ -35,6 +49,8 @@ class AdoptionRequestControllerTest {
 
     @MockitoBean
     private AdoptionRequestService adoptionRequestService;
+
+
 
     @Test
     void shouldReturnAllRequests() throws Exception {
@@ -74,6 +90,7 @@ class AdoptionRequestControllerTest {
                 """;
 
         mockMvc.perform(post("/adoption-requests")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -97,6 +114,7 @@ class AdoptionRequestControllerTest {
                 """;
 
         mockMvc.perform(post("/adoption-requests")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isConflict());
@@ -107,36 +125,24 @@ class AdoptionRequestControllerTest {
         AdoptionRequestResponse response = new AdoptionRequestResponse();
         response.setStatus(AdoptionRequestStatus.APPROVED);
 
-        when(adoptionRequestService.approveRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+        when(adoptionRequestService.approveRequest(eq(20L), eq("owner@email.com")))
                 .thenReturn(response);
 
-        String requestBody = """
-                {
-                  "userId": 1
-                }
-                """;
-
         mockMvc.perform(patch("/adoption-requests/20/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .with(csrf())
+                        .with(user("owner@email.com")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
     @Test
     void shouldReturnConflictWhenApprovingInvalidRequest() throws Exception {
-        when(adoptionRequestService.approveRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+        when(adoptionRequestService.approveRequest(eq(20L), eq("owner@email.com")))
                 .thenThrow(new AdoptionRequestNotPendingException("Only pending requests can be approved"));
 
-        String requestBody = """
-                {
-                  "userId": 1
-                }
-                """;
-
         mockMvc.perform(patch("/adoption-requests/20/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .with(csrf())
+                        .with(user("owner@email.com")))
                 .andExpect(status().isConflict());
     }
 
@@ -145,72 +151,47 @@ class AdoptionRequestControllerTest {
         AdoptionRequestResponse response = new AdoptionRequestResponse();
         response.setStatus(AdoptionRequestStatus.REJECTED);
 
-        when(adoptionRequestService.rejectRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+        when(adoptionRequestService.rejectRequest(eq(20L), eq("owner@email.com")))
                 .thenReturn(response);
 
-        String requestBody = """
-                {
-                  "userId": 1
-                }
-                """;
-
         mockMvc.perform(patch("/adoption-requests/20/reject")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .with(csrf())
+                        .with(user("owner@email.com")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"));
     }
 
     @Test
     void shouldReturnConflictWhenRejectingInvalidRequest() throws Exception {
-        when(adoptionRequestService.rejectRequest(eq(20L), any(UpdateRequestStatusRequest.class)))
+        when(adoptionRequestService.rejectRequest(eq(20L), eq("owner@email.com")))
                 .thenThrow(new AdoptionRequestNotPendingException("Only pending requests can be rejected"));
 
-        String requestBody = """
-                {
-                  "userId": 1
-                }
-                """;
-
         mockMvc.perform(patch("/adoption-requests/20/reject")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .with(csrf())
+                        .with(user("owner@email.com")))
                 .andExpect(status().isConflict());
     }
+
     @Test
     void shouldReturnBadRequestWhenCreateAdoptionRequestIsInvalid() throws Exception {
         String longMessage = "x".repeat(501);
 
         String requestBody = """
-            {
-              "message": "%s",
-              "animalId": 0,
-              "userId": 0
-            }
-            """.formatted(longMessage);
+                {
+                  "message": "%s",
+                  "animalId": 0,
+                  "userId": 0
+                }
+                """.formatted(longMessage);
 
         mockMvc.perform(post("/adoption-requests")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.fields.message").exists())
                 .andExpect(jsonPath("$.fields.animalId").exists())
-                .andExpect(jsonPath("$.fields.userId").exists());
-    }
-    @Test
-    void shouldReturnBadRequestWhenUpdateRequestStatusIsInvalid() throws Exception {
-        String requestBody = """
-            {
-              "userId": 0
-            }
-            """;
-
-        mockMvc.perform(patch("/adoption-requests/20/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.fields.userId").exists());
     }
 }

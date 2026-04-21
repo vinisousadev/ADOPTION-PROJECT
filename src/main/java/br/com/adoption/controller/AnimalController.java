@@ -5,9 +5,14 @@ import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.service.AnimalService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
+
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/animals")
 public class AnimalController {

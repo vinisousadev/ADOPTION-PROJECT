@@ -2,10 +2,7 @@ package br.com.adoption.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
-import java.time.LocalDateTime;
 
 public class CreateUserRequest {
 
@@ -30,9 +27,6 @@ public class CreateUserRequest {
 
     @Size(min = 2, max = 2)
     private String state;
-
-    @NotNull
-    private LocalDateTime registrationDate;
 
     @NotBlank
     @Size(max = 255)
@@ -87,14 +81,6 @@ public class CreateUserRequest {
 
     public void setState(String state) {
         this.state = state;
-    }
-
-    public LocalDateTime getRegistrationDate() {
-        return registrationDate;
-    }
-
-    public void setRegistrationDate(LocalDateTime registrationDate) {
-        this.registrationDate = registrationDate;
     }
 
     public String getPasswordHash() {

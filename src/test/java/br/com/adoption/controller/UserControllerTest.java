@@ -4,10 +4,14 @@ import br.com.adoption.dto.request.CreateUserRequest;
 import br.com.adoption.dto.response.UserResponse;
 import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.GlobalExceptionHandler;
+import br.com.adoption.security.JwtAuthenticationFilter;
 import br.com.adoption.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -24,7 +28,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
+@WebMvcTest(
+        controllers = UserController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthenticationFilter.class
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
 class UserControllerTest {
 
@@ -77,7 +88,6 @@ class UserControllerTest {
                   "email": "carlos@email.com",
                   "city": "Joao Pessoa",
                   "state": "PB",
-                  "registrationDate": "2026-04-18T10:30:00",
                   "passwordHash": "123456"
                 }
                 """;
@@ -111,8 +121,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.fields.name").exists())
                 .andExpect(jsonPath("$.fields.cpf").exists())
                 .andExpect(jsonPath("$.fields.email").exists())
-                .andExpect(jsonPath("$.fields.passwordHash").exists())
-                .andExpect(jsonPath("$.fields.registrationDate").exists());
+                .andExpect(jsonPath("$.fields.passwordHash").exists());
 
         verify(userService, never()).save(any(CreateUserRequest.class));
     }

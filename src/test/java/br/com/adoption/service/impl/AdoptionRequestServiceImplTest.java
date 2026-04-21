@@ -1,7 +1,6 @@
 package br.com.adoption.service.impl;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.request.UpdateRequestStatusRequest;
 import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
@@ -191,11 +190,13 @@ class AdoptionRequestServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenNonOwnerTriesToApprove() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(99L);
+        String authenticatedEmail = "intruso@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
+
+        User intruder = mock(User.class);
+        when(intruder.getId()).thenReturn(99L);
 
         Animal animal = new Animal();
         animal.setUser(owner);
@@ -204,11 +205,12 @@ class AdoptionRequestServiceImplTest {
         request.setAnimal(animal);
         request.setStatus(AdoptionRequestStatus.PENDING);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(intruder));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
         OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
                 OnlyOwnerCanManageAdoptionRequestException.class,
-                () -> adoptionRequestService.approveRequest(20L, requestDto)
+                () -> adoptionRequestService.approveRequest(20L, authenticatedEmail)
         );
 
         assertEquals("Only the animal owner can approve this request", exception.getMessage());
@@ -216,8 +218,7 @@ class AdoptionRequestServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenApprovingNonPendingRequest() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(1L);
+        String authenticatedEmail = "owner@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -229,11 +230,12 @@ class AdoptionRequestServiceImplTest {
         request.setAnimal(animal);
         request.setStatus(AdoptionRequestStatus.REJECTED);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(owner));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
         AdoptionRequestNotPendingException exception = assertThrows(
                 AdoptionRequestNotPendingException.class,
-                () -> adoptionRequestService.approveRequest(20L, requestDto)
+                () -> adoptionRequestService.approveRequest(20L, authenticatedEmail)
         );
 
         assertEquals("Only pending requests can be approved", exception.getMessage());
@@ -241,11 +243,15 @@ class AdoptionRequestServiceImplTest {
 
     @Test
     void shouldApproveRequestAndRejectOtherPendingRequests() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(1L);
+        String authenticatedEmail = "owner@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User otherRequester = mock(User.class);
 
         Animal animal = spy(new Animal());
         doReturn(10L).when(animal).getId();
@@ -255,24 +261,30 @@ class AdoptionRequestServiceImplTest {
         AdoptionRequest approvedRequest = spy(new AdoptionRequest());
         doReturn(20L).when(approvedRequest).getId();
         approvedRequest.setAnimal(animal);
+        approvedRequest.setUser(requester);
         approvedRequest.setStatus(AdoptionRequestStatus.PENDING);
 
         AdoptionRequest pendingRequest = spy(new AdoptionRequest());
         doReturn(21L).when(pendingRequest).getId();
         pendingRequest.setAnimal(animal);
+        pendingRequest.setUser(otherRequester);
         pendingRequest.setStatus(AdoptionRequestStatus.PENDING);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(owner));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(approvedRequest));
         when(animalRepository.save(any(Animal.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(adoptionRequestRepository.findByAnimal_IdAndStatus(10L, AdoptionRequestStatus.PENDING))
                 .thenReturn(List.of(approvedRequest, pendingRequest));
 
-        AdoptionRequestResponse result = adoptionRequestService.approveRequest(20L, requestDto);
+        AdoptionRequestResponse result = adoptionRequestService.approveRequest(20L, authenticatedEmail);
 
         assertNotNull(result);
         assertEquals(AdoptionRequestStatus.APPROVED, result.getStatus());
+        assertEquals(10L, result.getAnimalId());
+        assertEquals(2L, result.getUserId());
         assertNotNull(result.getResponseDate());
+
         assertEquals("ADOPTED", animal.getStatus());
         assertEquals(AdoptionRequestStatus.REJECTED, pendingRequest.getStatus());
         assertNotNull(pendingRequest.getResponseDate());
@@ -283,11 +295,13 @@ class AdoptionRequestServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenNonOwnerTriesToReject() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(99L);
+        String authenticatedEmail = "intruso@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
+
+        User intruder = mock(User.class);
+        when(intruder.getId()).thenReturn(99L);
 
         Animal animal = new Animal();
         animal.setUser(owner);
@@ -296,11 +310,12 @@ class AdoptionRequestServiceImplTest {
         request.setAnimal(animal);
         request.setStatus(AdoptionRequestStatus.PENDING);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(intruder));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
         OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
                 OnlyOwnerCanManageAdoptionRequestException.class,
-                () -> adoptionRequestService.rejectRequest(20L, requestDto)
+                () -> adoptionRequestService.rejectRequest(20L, authenticatedEmail)
         );
 
         assertEquals("Only the animal owner can reject this request", exception.getMessage());
@@ -308,8 +323,7 @@ class AdoptionRequestServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenRejectingNonPendingRequest() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(1L);
+        String authenticatedEmail = "owner@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -321,39 +335,49 @@ class AdoptionRequestServiceImplTest {
         request.setAnimal(animal);
         request.setStatus(AdoptionRequestStatus.APPROVED);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(owner));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
 
         AdoptionRequestNotPendingException exception = assertThrows(
                 AdoptionRequestNotPendingException.class,
-                () -> adoptionRequestService.rejectRequest(20L, requestDto)
+                () -> adoptionRequestService.rejectRequest(20L, authenticatedEmail)
         );
 
         assertEquals("Only pending requests can be rejected", exception.getMessage());
     }
+
     @Test
     void shouldRejectPendingRequest() {
-        UpdateRequestStatusRequest requestDto = new UpdateRequestStatusRequest();
-        requestDto.setUserId(1L);
+        String authenticatedEmail = "owner@email.com";
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
 
-        Animal animal = new Animal();
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
         animal.setUser(owner);
 
         AdoptionRequest request = spy(new AdoptionRequest());
         doReturn(20L).when(request).getId();
         request.setAnimal(animal);
+        request.setUser(requester);
         request.setStatus(AdoptionRequestStatus.PENDING);
 
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(owner));
         when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
         when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AdoptionRequestResponse result = adoptionRequestService.rejectRequest(20L, requestDto);
+        AdoptionRequestResponse result = adoptionRequestService.rejectRequest(20L, authenticatedEmail);
 
         assertNotNull(result);
         assertEquals(AdoptionRequestStatus.REJECTED, result.getStatus());
+        assertEquals(10L, result.getAnimalId());
+        assertEquals(2L, result.getUserId());
         assertNotNull(result.getResponseDate());
+
         verify(adoptionRequestRepository, times(1)).save(request);
     }
 }

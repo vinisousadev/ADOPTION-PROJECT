@@ -1,14 +1,16 @@
 package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.request.UpdateRequestStatusRequest;
 import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.service.AdoptionRequestService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/adoption-requests")
 public class AdoptionRequestController {
@@ -31,13 +33,13 @@ public class AdoptionRequestController {
 
     @PatchMapping("/{id}/approve")
     public AdoptionRequestResponse approveRequest(@PathVariable Long id,
-                                                  @Valid @RequestBody UpdateRequestStatusRequest request) {
-        return adoptionRequestService.approveRequest(id, request);
+                                                  Authentication authentication) {
+        return adoptionRequestService.approveRequest(id, authentication.getName());
     }
 
     @PatchMapping("/{id}/reject")
     public AdoptionRequestResponse rejectRequest(@PathVariable Long id,
-                                                 @Valid @RequestBody UpdateRequestStatusRequest request) {
-        return adoptionRequestService.rejectRequest(id, request);
+                                                 Authentication authentication) {
+        return adoptionRequestService.rejectRequest(id, authentication.getName());
     }
 }

@@ -1,7 +1,6 @@
 package br.com.adoption.service.impl;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.request.UpdateRequestStatusRequest;
 import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
@@ -80,13 +79,14 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
 
     @Transactional
     @Override
-    public AdoptionRequestResponse approveRequest(Long requestId, UpdateRequestStatusRequest requestDto) {
-        Long userId = requestDto.getUserId();
+    public AdoptionRequestResponse approveRequest(Long requestId, String userEmail) {
+        User authenticatedUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
-        if (!request.getAnimal().getUser().getId().equals(userId)) {
+        if (!request.getAnimal().getUser().getId().equals(authenticatedUser.getId())) {
             throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can approve this request");
         }
 
@@ -120,13 +120,14 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     }
 
     @Override
-    public AdoptionRequestResponse rejectRequest(Long requestId, UpdateRequestStatusRequest requestDto) {
-        Long userId = requestDto.getUserId();
+    public AdoptionRequestResponse rejectRequest(Long requestId, String userEmail) {
+        User authenticatedUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
-        if (!request.getAnimal().getUser().getId().equals(userId)) {
+        if (!request.getAnimal().getUser().getId().equals(authenticatedUser.getId())) {
             throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can reject this request");
         }
 
