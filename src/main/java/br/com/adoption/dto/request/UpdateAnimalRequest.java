@@ -8,9 +8,8 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-public class CreateAnimalRequest {
+public class UpdateAnimalRequest {
 
     @NotBlank
     @Size(max = 100)
@@ -45,10 +44,7 @@ public class CreateAnimalRequest {
     @Size(max = 500)
     private String description;
 
-    @NotNull
-    private LocalDateTime registrationDate;
-
-    public CreateAnimalRequest() {
+    public UpdateAnimalRequest() {
     }
 
     public String getAnimalName() {
@@ -137,13 +133,5 @@ public class CreateAnimalRequest {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public LocalDateTime getRegistrationDate() {
-        return registrationDate;
-    }
-
-    public void setRegistrationDate(LocalDateTime registrationDate) {
-        this.registrationDate = registrationDate;
     }
 }

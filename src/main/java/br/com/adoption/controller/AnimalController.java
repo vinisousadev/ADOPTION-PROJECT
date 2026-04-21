@@ -1,16 +1,15 @@
 package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.service.AnimalService;
-import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -28,9 +27,30 @@ public class AnimalController {
         return animalService.getAvailableAnimals();
     }
 
+    @GetMapping("/{id}")
+    public AnimalResponse getAnimalById(@PathVariable Long id,
+                                        Authentication authentication) {
+        String userEmail = authentication != null ? authentication.getName() : null;
+        return animalService.getById(id, userEmail);
+    }
+
     @PostMapping
-    public AnimalResponse createAnimal(@Valid @RequestBody CreateAnimalRequest request) {
-        return animalService.save(request);
+    public AnimalResponse createAnimal(@Valid @RequestBody CreateAnimalRequest request,
+                                       Authentication authentication) {
+        return animalService.save(request, authentication.getName());
+    }
+
+    @PutMapping("/{id}")
+    public AnimalResponse updateAnimal(@PathVariable Long id,
+                                       @Valid @RequestBody UpdateAnimalRequest request,
+                                       Authentication authentication) {
+        return animalService.update(id, request, authentication.getName());
+    }
+
+    @DeleteMapping("/{id}")
+    public AnimalResponse deleteAnimal(@PathVariable Long id,
+                                       Authentication authentication) {
+        return animalService.delete(id, authentication.getName());
     }
 
     @GetMapping

@@ -92,6 +92,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(OnlyOwnerCanManageAnimalException.class)
+    public ResponseEntity<Map<String, Object>> handleOnlyOwnerCanManageAnimal(
+            OnlyOwnerCanManageAnimalException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 403,
+                        "error", "Forbidden",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
     @ExceptionHandler(AdoptionRequestNotPendingException.class)
     public ResponseEntity<Map<String, Object>> handleAdoptionRequestNotPending(
             AdoptionRequestNotPendingException ex) {

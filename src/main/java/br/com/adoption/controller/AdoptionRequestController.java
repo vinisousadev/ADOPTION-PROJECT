@@ -27,8 +27,9 @@ public class AdoptionRequestController {
     }
 
     @PostMapping
-    public AdoptionRequestResponse createRequest(@Valid @RequestBody CreateAdoptionRequest request) {
-        return adoptionRequestService.save(request);
+    public AdoptionRequestResponse createRequest(@Valid @RequestBody CreateAdoptionRequest request,
+                                                 Authentication authentication) {
+        return adoptionRequestService.save(request, authentication.getName());
     }
 
     @PatchMapping("/{id}/approve")

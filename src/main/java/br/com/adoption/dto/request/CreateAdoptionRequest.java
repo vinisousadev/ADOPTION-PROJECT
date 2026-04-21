@@ -13,10 +13,6 @@ public class CreateAdoptionRequest {
     @Positive
     private Long animalId;
 
-    @NotNull
-    @Positive
-    private Long userId;
-
     public CreateAdoptionRequest() {
     }
 
@@ -34,13 +30,5 @@ public class CreateAdoptionRequest {
 
     public void setAnimalId(Long animalId) {
         this.animalId = animalId;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
     }
 }

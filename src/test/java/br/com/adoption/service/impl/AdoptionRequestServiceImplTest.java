@@ -70,7 +70,6 @@ class AdoptionRequestServiceImplTest {
         CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
         requestDto.setMessage("I want to adopt Nina");
         requestDto.setAnimalId(10L);
-        requestDto.setUserId(2L);
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -84,12 +83,12 @@ class AdoptionRequestServiceImplTest {
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(requester));
+        when(userRepository.findByEmail("requester@email.com")).thenReturn(Optional.of(requester));
         when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(10L, 2L, AdoptionRequestStatus.PENDING))
                 .thenReturn(false);
         when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AdoptionRequestResponse result = adoptionRequestService.save(requestDto);
+        AdoptionRequestResponse result = adoptionRequestService.save(requestDto, "requester@email.com");
 
         ArgumentCaptor<AdoptionRequest> captor = ArgumentCaptor.forClass(AdoptionRequest.class);
         verify(adoptionRequestRepository, times(1)).save(captor.capture());
@@ -115,7 +114,6 @@ class AdoptionRequestServiceImplTest {
     void shouldThrowExceptionWhenOwnerTriesToAdoptOwnAnimal() {
         CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
         requestDto.setAnimalId(10L);
-        requestDto.setUserId(1L);
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -125,11 +123,11 @@ class AdoptionRequestServiceImplTest {
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(userRepository.findByEmail("owner@email.com")).thenReturn(Optional.of(owner));
 
         OwnerCannotAdoptOwnAnimalException exception = assertThrows(
                 OwnerCannotAdoptOwnAnimalException.class,
-                () -> adoptionRequestService.save(requestDto)
+                () -> adoptionRequestService.save(requestDto, "owner@email.com")
         );
 
         assertEquals("The owner cannot create an adoption request for their own animal", exception.getMessage());
@@ -140,7 +138,6 @@ class AdoptionRequestServiceImplTest {
     void shouldThrowExceptionWhenDuplicatePendingRequestExists() {
         CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
         requestDto.setAnimalId(10L);
-        requestDto.setUserId(2L);
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -154,13 +151,13 @@ class AdoptionRequestServiceImplTest {
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(requester));
+        when(userRepository.findByEmail("requester@email.com")).thenReturn(Optional.of(requester));
         when(adoptionRequestRepository.existsByAnimal_IdAndUser_IdAndStatus(10L, 2L, AdoptionRequestStatus.PENDING))
                 .thenReturn(true);
 
         DuplicateAdoptionRequestException exception = assertThrows(
                 DuplicateAdoptionRequestException.class,
-                () -> adoptionRequestService.save(requestDto)
+                () -> adoptionRequestService.save(requestDto, "requester@email.com")
         );
 
         assertEquals("User already has a pending request for this animal", exception.getMessage());
@@ -171,7 +168,6 @@ class AdoptionRequestServiceImplTest {
     void shouldThrowExceptionWhenAnimalIsNotAvailable() {
         CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
         requestDto.setAnimalId(10L);
-        requestDto.setUserId(2L);
 
         Animal animal = new Animal();
         animal.setStatus("ADOPTED");
@@ -180,11 +176,11 @@ class AdoptionRequestServiceImplTest {
 
         AnimalNotAvailableException exception = assertThrows(
                 AnimalNotAvailableException.class,
-                () -> adoptionRequestService.save(requestDto)
+                () -> adoptionRequestService.save(requestDto, "requester@email.com")
         );
 
         assertEquals("Animal is not available for adoption", exception.getMessage());
-        verify(userRepository, never()).findById(anyLong());
+        verify(userRepository, never()).findByEmail(anyString());
         verify(adoptionRequestRepository, never()).save(any(AdoptionRequest.class));
     }
 

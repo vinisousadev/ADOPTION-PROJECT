@@ -45,7 +45,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     }
 
     @Override
-    public AdoptionRequestResponse save(CreateAdoptionRequest request) {
+    public AdoptionRequestResponse save(CreateAdoptionRequest request, String userEmail) {
         Animal animal = animalRepository.findById(request.getAnimalId())
                 .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
 
@@ -53,7 +53,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             throw new AnimalNotAvailableException("Animal is not available for adoption");
         }
 
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (animal.getUser() != null && animal.getUser().getId().equals(user.getId())) {

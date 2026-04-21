@@ -31,8 +31,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/animals/available").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/animals/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/animal-photos").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/animals").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/adoption-requests").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/animals").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/animals/*").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/animals/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/animals/*").authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/animal-photos").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/adoption-requests").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/adoption-requests/*/approve").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/adoption-requests/*/reject").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

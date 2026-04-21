@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface AdoptionRequestService {
     List<AdoptionRequestResponse> getAllRequests();
-    AdoptionRequestResponse save(CreateAdoptionRequest request);
+    AdoptionRequestResponse save(CreateAdoptionRequest request, String userEmail);
     AdoptionRequestResponse approveRequest(Long requestId, String userEmail);
     AdoptionRequestResponse rejectRequest(Long requestId, String userEmail);
 }

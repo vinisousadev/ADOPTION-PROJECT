@@ -79,13 +79,12 @@ class AdoptionRequestControllerTest {
         response.setAnimalId(10L);
         response.setUserId(2L);
 
-        when(adoptionRequestService.save(any(CreateAdoptionRequest.class))).thenReturn(response);
+        when(adoptionRequestService.save(any(CreateAdoptionRequest.class), eq("user"))).thenReturn(response);
 
         String requestBody = """
                 {
                   "message": "I want to adopt Nina",
-                  "animalId": 10,
-                  "userId": 2
+                  "animalId": 10
                 }
                 """;
 
@@ -102,14 +101,13 @@ class AdoptionRequestControllerTest {
 
     @Test
     void shouldReturnConflictWhenCreatingDuplicateRequest() throws Exception {
-        when(adoptionRequestService.save(any(CreateAdoptionRequest.class)))
+        when(adoptionRequestService.save(any(CreateAdoptionRequest.class), eq("user")))
                 .thenThrow(new DuplicateAdoptionRequestException("User already has a pending request for this animal"));
 
         String requestBody = """
                 {
                   "message": "I want to adopt Nina",
-                  "animalId": 10,
-                  "userId": 2
+                  "animalId": 10
                 }
                 """;
 
@@ -179,8 +177,7 @@ class AdoptionRequestControllerTest {
         String requestBody = """
                 {
                   "message": "%s",
-                  "animalId": 0,
-                  "userId": 0
+                  "animalId": 0
                 }
                 """.formatted(longMessage);
 
@@ -191,7 +188,6 @@ class AdoptionRequestControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.fields.message").exists())
-                .andExpect(jsonPath("$.fields.animalId").exists())
-                .andExpect(jsonPath("$.fields.userId").exists());
+                .andExpect(jsonPath("$.fields.animalId").exists());
     }
 }
