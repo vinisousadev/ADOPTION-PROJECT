@@ -1,15 +1,17 @@
 package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.service.AnimalService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -23,8 +25,14 @@ public class AnimalController {
     }
 
     @GetMapping("/available")
-    public List<AnimalResponse> getAvailableAnimals() {
-        return animalService.getAvailableAnimals();
+    public PagedModel<AnimalResponse> getAvailableAnimals(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(animalService.getAvailableAnimals(pageable));
+    }
+
+    @GetMapping("/mine")
+    public PagedModel<AnimalResponse> getMyAnimals(Authentication authentication,
+                                                   @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(animalService.getMyAnimals(authentication.getName(), pageable));
     }
 
     @GetMapping("/{id}")
@@ -47,6 +55,13 @@ public class AnimalController {
         return animalService.update(id, request, authentication.getName());
     }
 
+    @PatchMapping("/{id}")
+    public AnimalResponse patchAnimal(@PathVariable Long id,
+                                      @Valid @RequestBody PatchAnimalRequest request,
+                                      Authentication authentication) {
+        return animalService.patch(id, request, authentication.getName());
+    }
+
     @DeleteMapping("/{id}")
     public AnimalResponse deleteAnimal(@PathVariable Long id,
                                        Authentication authentication) {
@@ -54,7 +69,7 @@ public class AnimalController {
     }
 
     @GetMapping
-    public List<AnimalResponse> getAllAnimals() {
-        return animalService.getAllAnimals();
+    public PagedModel<AnimalResponse> getAllAnimals(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(animalService.getAllAnimals(pageable));
     }
 }

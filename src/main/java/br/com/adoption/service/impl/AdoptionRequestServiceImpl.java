@@ -6,6 +6,7 @@ import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
 import br.com.adoption.entity.User;
+import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.AdoptionRequestNotPendingException;
 import br.com.adoption.exception.AnimalNotAvailableException;
 import br.com.adoption.exception.DuplicateAdoptionRequestException;
@@ -17,6 +18,8 @@ import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import br.com.adoption.service.AdoptionRequestService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +45,35 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     @Override
     public List<AdoptionRequestResponse> getAllRequests() {
         return AdoptionRequestMapper.toResponseList(adoptionRequestRepository.findAll(Sort.by("id")));
+    }
+
+    @Override
+    public Page<AdoptionRequestResponse> getAllRequests(Pageable pageable) {
+        return adoptionRequestRepository.findAll(pageable).map(AdoptionRequestMapper::toResponse);
+    }
+
+    @Override
+    public AdoptionRequestResponse getById(Long requestId, String userEmail) {
+        User authenticatedUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        AdoptionRequest request = adoptionRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
+
+        boolean isAdmin = authenticatedUser.getUserType() == UserType.ADMIN;
+        boolean isRequester = request.getUser() != null
+                && request.getUser().getId().equals(authenticatedUser.getId());
+        boolean isAnimalOwner = request.getAnimal() != null
+                && request.getAnimal().getUser() != null
+                && request.getAnimal().getUser().getId().equals(authenticatedUser.getId());
+
+        if (!isAdmin && !isRequester && !isAnimalOwner) {
+            throw new OnlyOwnerCanManageAdoptionRequestException(
+                    "Only requester, animal owner or admin can access this adoption request"
+            );
+        }
+
+        return AdoptionRequestMapper.toResponse(request);
     }
 
     @Override
@@ -86,8 +118,11 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
-        if (!request.getAnimal().getUser().getId().equals(authenticatedUser.getId())) {
-            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can approve this request");
+        boolean isAdmin = authenticatedUser.getUserType() == UserType.ADMIN;
+        boolean isOwner = request.getAnimal().getUser().getId().equals(authenticatedUser.getId());
+
+        if (!isOwner && !isAdmin) {
+            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner or admin can approve this request");
         }
 
         if (request.getStatus() != AdoptionRequestStatus.PENDING) {
@@ -127,8 +162,11 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         AdoptionRequest request = adoptionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
 
-        if (!request.getAnimal().getUser().getId().equals(authenticatedUser.getId())) {
-            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner can reject this request");
+        boolean isAdmin = authenticatedUser.getUserType() == UserType.ADMIN;
+        boolean isOwner = request.getAnimal().getUser().getId().equals(authenticatedUser.getId());
+
+        if (!isOwner && !isAdmin) {
+            throw new OnlyOwnerCanManageAdoptionRequestException("Only the animal owner or admin can reject this request");
         }
 
         if (request.getStatus() != AdoptionRequestStatus.PENDING) {
@@ -140,5 +178,33 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
 
         AdoptionRequest rejectedRequest = adoptionRequestRepository.save(request);
         return AdoptionRequestMapper.toResponse(rejectedRequest);
+    }
+
+    @Override
+    public AdoptionRequestResponse cancelRequest(Long requestId, String userEmail) {
+        User authenticatedUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        AdoptionRequest request = adoptionRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Adoption request not found"));
+
+        boolean isAdmin = authenticatedUser.getUserType() == UserType.ADMIN;
+        boolean isRequester = request.getUser().getId().equals(authenticatedUser.getId());
+
+        if (!isRequester && !isAdmin) {
+            throw new OnlyOwnerCanManageAdoptionRequestException(
+                    "Only the request owner or admin can cancel this request"
+            );
+        }
+
+        if (request.getStatus() != AdoptionRequestStatus.PENDING) {
+            throw new AdoptionRequestNotPendingException("Only pending requests can be canceled");
+        }
+
+        request.setStatus(AdoptionRequestStatus.CANCELLED);
+        request.setResponseDate(LocalDateTime.now());
+
+        AdoptionRequest cancelledRequest = adoptionRequestRepository.save(request);
+        return AdoptionRequestMapper.toResponse(cancelledRequest);
     }
 }

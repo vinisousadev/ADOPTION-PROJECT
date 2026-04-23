@@ -1,6 +1,7 @@
 package br.com.adoption.service.impl;
 
 import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.entity.Animal;
@@ -62,6 +63,45 @@ class AnimalServiceImplTest {
         assertEquals("AVAILABLE", result.get(0).getStatus());
 
         verify(animalRepository, times(1)).findByStatus("AVAILABLE");
+    }
+
+    @Test
+    void shouldReturnAuthenticatedUserAnimalsOrderedById() {
+        User user = mock(User.class);
+        when(user.getId()).thenReturn(1L);
+
+        Animal animal1 = new Animal();
+        animal1.setAnimalName("Rex");
+        animal1.setSpecies("Dog");
+
+        Animal animal2 = new Animal();
+        animal2.setAnimalName("Nina");
+        animal2.setSpecies("Cat");
+
+        when(userRepository.findByEmail("owner@email.com")).thenReturn(Optional.of(user));
+        when(animalRepository.findByUser_IdOrderById(1L)).thenReturn(List.of(animal1, animal2));
+
+        List<AnimalResponse> result = animalService.getMyAnimals("owner@email.com");
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Rex", result.get(0).getAnimalName());
+        assertEquals("Nina", result.get(1).getAnimalName());
+
+        verify(animalRepository, times(1)).findByUser_IdOrderById(1L);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenGettingMyAnimalsAndUserDoesNotExist() {
+        when(userRepository.findByEmail("missing@email.com")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> animalService.getMyAnimals("missing@email.com")
+        );
+
+        assertEquals("User not found", exception.getMessage());
+        verify(animalRepository, never()).findByUser_IdOrderById(anyLong());
     }
 
     @Test
@@ -173,7 +213,6 @@ class AnimalServiceImplTest {
         request.setVaccinated('Y');
         request.setNeutered('N');
         request.setDescription("Very friendly");
-        request.setRegistrationDate(LocalDateTime.now());
 
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -198,6 +237,7 @@ class AnimalServiceImplTest {
         assertEquals("Dog", capturedAnimal.getSpecies());
         assertEquals("AVAILABLE", capturedAnimal.getStatus());
         assertEquals(owner, capturedAnimal.getUser());
+        assertNotNull(capturedAnimal.getRegistrationDate());
     }
 
     @Test
@@ -290,6 +330,36 @@ class AnimalServiceImplTest {
         assertNotNull(result);
         assertEquals("Mia atualizada", result.getAnimalName());
         assertEquals("Cat", result.getSpecies());
+
+        verify(animalRepository, times(1)).save(animal);
+    }
+
+    @Test
+    void shouldPatchAnimalWhenAuthenticatedUserIsOwner() {
+        PatchAnimalRequest request = new PatchAnimalRequest();
+        request.setDescription("Updated by patch");
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+        when(owner.getUserType()).thenReturn(UserType.COMMON);
+
+        Animal animal = new Animal();
+        animal.setAnimalName("Rex");
+        animal.setSpecies("Dog");
+        animal.setDescription("Old");
+        animal.setStatus("AVAILABLE");
+        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setUser(owner);
+
+        when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
+        when(userRepository.findByEmail("owner@email.com")).thenReturn(Optional.of(owner));
+        when(animalRepository.save(any(Animal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AnimalResponse result = animalService.patch(10L, request, "owner@email.com");
+
+        assertNotNull(result);
+        assertEquals("Updated by patch", result.getDescription());
+        assertEquals("Rex", result.getAnimalName());
 
         verify(animalRepository, times(1)).save(animal);
     }

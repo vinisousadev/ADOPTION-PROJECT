@@ -21,7 +21,6 @@ public class AnimalMapper {
         animal.setVaccinated(request.getVaccinated());
         animal.setNeutered(request.getNeutered());
         animal.setDescription(request.getDescription());
-        animal.setRegistrationDate(request.getRegistrationDate());
         return animal;
     }
 

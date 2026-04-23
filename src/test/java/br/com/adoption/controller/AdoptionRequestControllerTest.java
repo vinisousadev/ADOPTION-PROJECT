@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -62,13 +63,30 @@ class AdoptionRequestControllerTest {
         request2.setMessage("Request 2");
         request2.setStatus(AdoptionRequestStatus.APPROVED);
 
-        when(adoptionRequestService.getAllRequests()).thenReturn(List.of(request1, request2));
+        when(adoptionRequestService.getAllRequests(any())).thenReturn(new PageImpl<>(List.of(request1, request2)));
 
         mockMvc.perform(get("/adoption-requests"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].message").value("Request 1"))
-                .andExpect(jsonPath("$[1].message").value("Request 2"));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].message").value("Request 1"))
+                .andExpect(jsonPath("$.content[1].message").value("Request 2"))
+                .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnRequestById() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setId(20L);
+        response.setMessage("Request by id");
+        response.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(adoptionRequestService.getById(eq(20L), eq("user"))).thenReturn(response);
+
+        mockMvc.perform(get("/adoption-requests/20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(20))
+                .andExpect(jsonPath("$.message").value("Request by id"))
+                .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
@@ -166,7 +184,33 @@ class AdoptionRequestControllerTest {
 
         mockMvc.perform(patch("/adoption-requests/20/reject")
                         .with(csrf())
-                        .with(user("owner@email.com")))
+                .with(user("owner@email.com")))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldCancelRequestSuccessfully() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setStatus(AdoptionRequestStatus.CANCELLED);
+
+        when(adoptionRequestService.cancelRequest(eq(20L), eq("requester@email.com")))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/adoption-requests/20/cancel")
+                        .with(csrf())
+                        .with(user("requester@email.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    void shouldReturnConflictWhenCancellingInvalidRequest() throws Exception {
+        when(adoptionRequestService.cancelRequest(eq(20L), eq("requester@email.com")))
+                .thenThrow(new AdoptionRequestNotPendingException("Only pending requests can be canceled"));
+
+        mockMvc.perform(patch("/adoption-requests/20/cancel")
+                        .with(csrf())
+                        .with(user("requester@email.com")))
                 .andExpect(status().isConflict());
     }
 

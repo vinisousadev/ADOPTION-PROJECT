@@ -5,10 +5,11 @@ import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.service.AdoptionRequestService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -22,8 +23,14 @@ public class AdoptionRequestController {
     }
 
     @GetMapping
-    public List<AdoptionRequestResponse> getAllRequests() {
-        return adoptionRequestService.getAllRequests();
+    public PagedModel<AdoptionRequestResponse> getAllRequests(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(adoptionRequestService.getAllRequests(pageable));
+    }
+
+    @GetMapping("/{id}")
+    public AdoptionRequestResponse getRequestById(@PathVariable Long id,
+                                                  Authentication authentication) {
+        return adoptionRequestService.getById(id, authentication.getName());
     }
 
     @PostMapping
@@ -42,5 +49,11 @@ public class AdoptionRequestController {
     public AdoptionRequestResponse rejectRequest(@PathVariable Long id,
                                                  Authentication authentication) {
         return adoptionRequestService.rejectRequest(id, authentication.getName());
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public AdoptionRequestResponse cancelRequest(@PathVariable Long id,
+                                                 Authentication authentication) {
+        return adoptionRequestService.cancelRequest(id, authentication.getName());
     }
 }

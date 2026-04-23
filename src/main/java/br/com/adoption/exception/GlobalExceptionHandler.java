@@ -105,6 +105,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(OnlyOwnerCanManageUserException.class)
+    public ResponseEntity<Map<String, Object>> handleOnlyOwnerCanManageUser(
+            OnlyOwnerCanManageUserException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 403,
+                        "error", "Forbidden",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
     @ExceptionHandler(AdoptionRequestNotPendingException.class)
     public ResponseEntity<Map<String, Object>> handleAdoptionRequestNotPending(
             AdoptionRequestNotPendingException ex) {

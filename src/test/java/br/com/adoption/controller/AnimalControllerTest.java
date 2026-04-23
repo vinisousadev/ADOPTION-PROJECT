@@ -1,6 +1,7 @@
 package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.exception.GlobalExceptionHandler;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,6 +35,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -66,13 +69,14 @@ class AnimalControllerTest {
         animal2.setSpecies("Cat");
         animal2.setStatus("AVAILABLE");
 
-        when(animalService.getAvailableAnimals()).thenReturn(List.of(animal1, animal2));
+        when(animalService.getAvailableAnimals(any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
 
         mockMvc.perform(get("/animals/available"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].animalName").value("Rex"))
-                .andExpect(jsonPath("$[1].animalName").value("Mia"));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].animalName").value("Rex"))
+                .andExpect(jsonPath("$.content[1].animalName").value("Mia"))
+                .andExpect(jsonPath("$.page.totalElements").value(2));
     }
 
     @Test
@@ -85,13 +89,34 @@ class AnimalControllerTest {
         animal2.setAnimalName("Mia");
         animal2.setSpecies("Cat");
 
-        when(animalService.getAllAnimals()).thenReturn(List.of(animal1, animal2));
+        when(animalService.getAllAnimals(any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
 
         mockMvc.perform(get("/animals"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].animalName").value("Rex"))
-                .andExpect(jsonPath("$[1].animalName").value("Mia"));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].animalName").value("Rex"))
+                .andExpect(jsonPath("$.content[1].animalName").value("Mia"))
+                .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnAuthenticatedUserAnimals() throws Exception {
+        AnimalResponse animal1 = new AnimalResponse();
+        animal1.setAnimalName("Rex");
+        animal1.setSpecies("Dog");
+
+        AnimalResponse animal2 = new AnimalResponse();
+        animal2.setAnimalName("Nina");
+        animal2.setSpecies("Cat");
+
+        when(animalService.getMyAnimals(eq("user"), any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
+
+        mockMvc.perform(get("/animals/mine"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].animalName").value("Rex"))
+                .andExpect(jsonPath("$.content[1].animalName").value("Nina"))
+                .andExpect(jsonPath("$.page.totalElements").value(2));
     }
 
     @Test
@@ -144,8 +169,7 @@ class AnimalControllerTest {
                   "weightKg": 12.50,
                   "vaccinated": "Y",
                   "neutered": "N",
-                  "description": "Very friendly",
-                  "registrationDate": "2026-04-18T10:30:00"
+                  "description": "Very friendly"
                 }
                 """;
 
@@ -194,6 +218,36 @@ class AnimalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.animalName").value("Rex atualizado"))
                 .andExpect(jsonPath("$.species").value("Dog"))
+                .andExpect(jsonPath("$.status").value("AVAILABLE"))
+                .andExpect(jsonPath("$.userId").value(1));
+    }
+
+    @Test
+    void shouldPatchAnimal() throws Exception {
+        AnimalResponse patchedAnimal = new AnimalResponse();
+        patchedAnimal.setAnimalName("Rex novo nome");
+        patchedAnimal.setSpecies("Dog");
+        patchedAnimal.setDescription("Apenas descrição alterada");
+        patchedAnimal.setStatus("AVAILABLE");
+        patchedAnimal.setUserId(1L);
+
+        when(animalService.patch(eq(10L), any(PatchAnimalRequest.class), anyString()))
+                .thenReturn(patchedAnimal);
+
+        String requestBody = """
+                {
+                  "animalName": "Rex novo nome",
+                  "description": "Apenas descrição alterada"
+                }
+                """;
+
+        mockMvc.perform(patch("/animals/10")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.animalName").value("Rex novo nome"))
+                .andExpect(jsonPath("$.description").value("Apenas descrição alterada"))
                 .andExpect(jsonPath("$.status").value("AVAILABLE"))
                 .andExpect(jsonPath("$.userId").value(1));
     }
@@ -260,8 +314,7 @@ class AnimalControllerTest {
                   "animalName": "Rex",
                   "species": "Dog",
                   "vaccinated": "Y",
-                  "neutered": "N",
-                  "registrationDate": "2026-04-18T10:30:00"
+                  "neutered": "N"
                 }
                 """;
 
@@ -298,8 +351,7 @@ class AnimalControllerTest {
                 .andExpect(jsonPath("$.fields.age").exists())
                 .andExpect(jsonPath("$.fields.weightKg").exists())
                 .andExpect(jsonPath("$.fields.vaccinated").exists())
-                .andExpect(jsonPath("$.fields.neutered").exists())
-                .andExpect(jsonPath("$.fields.registrationDate").exists());
+                .andExpect(jsonPath("$.fields.neutered").exists());
 
         verify(animalService, never()).save(any(CreateAnimalRequest.class), anyString());
     }

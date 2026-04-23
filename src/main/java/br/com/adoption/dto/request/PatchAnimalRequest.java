@@ -1,21 +1,17 @@
 package br.com.adoption.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class CreateAnimalRequest {
+public class PatchAnimalRequest {
 
-    @NotBlank
     @Size(max = 100)
     private String animalName;
 
-    @NotBlank
     @Size(max = 50)
     private String species;
 
@@ -35,16 +31,14 @@ public class CreateAnimalRequest {
     @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal weightKg;
 
-    @NotNull
     private Character vaccinated;
 
-    @NotNull
     private Character neutered;
 
     @Size(max = 500)
     private String description;
 
-    public CreateAnimalRequest() {
+    public PatchAnimalRequest() {
     }
 
     public String getAnimalName() {

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Matriz Ideal de Autorização</title>
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --ink: #151515;
+      --line: #d8d8d8;
+      --head: #efefef;
+    }
+    body {
+      margin: 24px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+    p {
+      margin: 0 0 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--head);
+      font-weight: 700;
+    }
+    .note {
+      margin-top: 12px;
+      font-size: 11px;
+    }
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+  </style>
+</head>
+<body>
+  <h1>Matriz Ideal de Autorização</h1>
+  <p>Projeto ADOPTION-PROJECT-NEW</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Endpoint</th>
+        <th>Método</th>
+        <th>Público</th>
+        <th>COMMON</th>
+        <th>ADMIN</th>
+        <th>OWNER do recurso</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>/auth/login</td><td>POST</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/users</td><td>POST</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/users/me</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>Próprio usuário</td></tr>
+      <tr><td>/users</td><td>GET</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals/available</td><td>GET</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals/{id}</td><td>GET</td><td>Sim*</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/animals</td><td>POST</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals/{id}</td><td>PUT</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/animals/{id}</td><td>DELETE</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/animals</td><td>GET</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animal-photos</td><td>GET</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animal-photos</td><td>POST</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/adoption-requests</td><td>POST</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/adoption-requests/{id}/approve</td><td>PATCH</td><td>Não</td><td>Não**</td><td>Sim***</td><td>Sim***</td></tr>
+      <tr><td>/adoption-requests/{id}/reject</td><td>PATCH</td><td>Não</td><td>Não**</td><td>Sim***</td><td>Sim***</td></tr>
+      <tr><td>/adoption-requests/mine</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/adoption-requests/received</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/adoption-requests</td><td>GET (global)</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <p>* Público apenas se o animal estiver AVAILABLE; se não estiver, apenas OWNER/ADMIN.</p>
+    <p>** COMMON apenas quando for OWNER do recurso.</p>
+    <p>*** Regra sugerida: OWNER do animal ou ADMIN.</p>
+    <p>Respostas ideais: 401 sem token; 403 sem permissão; 404 para ocultar recurso privado quando aplicável.</p>
+  </div>
+</body>
+</html>

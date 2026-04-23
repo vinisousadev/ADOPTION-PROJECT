@@ -32,13 +32,21 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers(HttpMethod.GET, "/animals/available").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/animals/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/animals/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/animal-photos").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/animal-photos/*").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/users/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/animals").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/adoption-requests").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/adoption-requests/*").authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/users/*").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/users/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/users/*").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/animals").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/animals/*").authenticated()
@@ -46,9 +54,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/animals/*").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/animal-photos").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/animal-photos/*").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/animal-photos/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/animal-photos/*").authenticated()
                         .requestMatchers(HttpMethod.POST, "/adoption-requests").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/adoption-requests/*/approve").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/adoption-requests/*/reject").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/adoption-requests/*/cancel").authenticated()
 
                         .anyRequest().authenticated()
                 )

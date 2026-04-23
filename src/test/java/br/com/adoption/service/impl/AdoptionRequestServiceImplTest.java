@@ -66,6 +66,66 @@ class AdoptionRequestServiceImplTest {
     }
 
     @Test
+    void shouldReturnRequestByIdWhenUserIsRequester() {
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+        when(requester.getUserType()).thenReturn(br.com.adoption.entity.UserType.COMMON);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        Animal animal = new Animal();
+        animal.setUser(owner);
+
+        AdoptionRequest request = new AdoptionRequest();
+        request.setUser(requester);
+        request.setAnimal(animal);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail("requester@email.com")).thenReturn(Optional.of(requester));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+
+        AdoptionRequestResponse result = adoptionRequestService.getById(20L, "requester@email.com");
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.PENDING, result.getStatus());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUserCannotAccessRequestById() {
+        User intruder = mock(User.class);
+        when(intruder.getId()).thenReturn(99L);
+        when(intruder.getUserType()).thenReturn(br.com.adoption.entity.UserType.COMMON);
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        Animal animal = new Animal();
+        animal.setUser(owner);
+
+        AdoptionRequest request = new AdoptionRequest();
+        request.setUser(requester);
+        request.setAnimal(animal);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail("intruder@email.com")).thenReturn(Optional.of(intruder));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+
+        OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
+                OnlyOwnerCanManageAdoptionRequestException.class,
+                () -> adoptionRequestService.getById(20L, "intruder@email.com")
+        );
+
+        assertEquals(
+                "Only requester, animal owner or admin can access this adoption request",
+                exception.getMessage()
+        );
+    }
+
+    @Test
     void shouldSaveValidRequestWithPendingStatus() {
         CreateAdoptionRequest requestDto = new CreateAdoptionRequest();
         requestDto.setMessage("I want to adopt Nina");
@@ -209,7 +269,7 @@ class AdoptionRequestServiceImplTest {
                 () -> adoptionRequestService.approveRequest(20L, authenticatedEmail)
         );
 
-        assertEquals("Only the animal owner can approve this request", exception.getMessage());
+        assertEquals("Only the animal owner or admin can approve this request", exception.getMessage());
     }
 
     @Test
@@ -314,7 +374,79 @@ class AdoptionRequestServiceImplTest {
                 () -> adoptionRequestService.rejectRequest(20L, authenticatedEmail)
         );
 
-        assertEquals("Only the animal owner can reject this request", exception.getMessage());
+        assertEquals("Only the animal owner or admin can reject this request", exception.getMessage());
+    }
+
+    @Test
+    void shouldAllowAdminToApproveRequest() {
+        String authenticatedEmail = "admin@email.com";
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User admin = mock(User.class);
+        when(admin.getId()).thenReturn(99L);
+        when(admin.getUserType()).thenReturn(br.com.adoption.entity.UserType.ADMIN);
+
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
+        animal.setUser(owner);
+        animal.setStatus("AVAILABLE");
+
+        AdoptionRequest request = spy(new AdoptionRequest());
+        doReturn(20L).when(request).getId();
+        request.setAnimal(animal);
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(admin));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(animalRepository.save(any(Animal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(adoptionRequestRepository.findByAnimal_IdAndStatus(10L, AdoptionRequestStatus.PENDING))
+                .thenReturn(List.of(request));
+
+        AdoptionRequestResponse result = adoptionRequestService.approveRequest(20L, authenticatedEmail);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.APPROVED, result.getStatus());
+    }
+
+    @Test
+    void shouldAllowAdminToRejectRequest() {
+        String authenticatedEmail = "admin@email.com";
+
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(1L);
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User admin = mock(User.class);
+        when(admin.getId()).thenReturn(99L);
+        when(admin.getUserType()).thenReturn(br.com.adoption.entity.UserType.ADMIN);
+
+        Animal animal = spy(new Animal());
+        doReturn(10L).when(animal).getId();
+        animal.setUser(owner);
+
+        AdoptionRequest request = spy(new AdoptionRequest());
+        doReturn(20L).when(request).getId();
+        request.setAnimal(animal);
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(admin));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdoptionRequestResponse result = adoptionRequestService.rejectRequest(20L, authenticatedEmail);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.REJECTED, result.getStatus());
     }
 
     @Test
@@ -375,5 +507,106 @@ class AdoptionRequestServiceImplTest {
         assertNotNull(result.getResponseDate());
 
         verify(adoptionRequestRepository, times(1)).save(request);
+    }
+
+    @Test
+    void shouldCancelPendingRequestWhenRequester() {
+        String authenticatedEmail = "requester@email.com";
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+        when(requester.getUserType()).thenReturn(br.com.adoption.entity.UserType.COMMON);
+
+        Animal animal = new Animal();
+
+        AdoptionRequest request = spy(new AdoptionRequest());
+        doReturn(20L).when(request).getId();
+        request.setAnimal(animal);
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(requester));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdoptionRequestResponse result = adoptionRequestService.cancelRequest(20L, authenticatedEmail);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.CANCELLED, result.getStatus());
+        assertNotNull(result.getResponseDate());
+    }
+
+    @Test
+    void shouldAllowAdminToCancelPendingRequest() {
+        String authenticatedEmail = "admin@email.com";
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User admin = mock(User.class);
+        when(admin.getId()).thenReturn(99L);
+        when(admin.getUserType()).thenReturn(br.com.adoption.entity.UserType.ADMIN);
+
+        AdoptionRequest request = new AdoptionRequest();
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(admin));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(adoptionRequestRepository.save(any(AdoptionRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdoptionRequestResponse result = adoptionRequestService.cancelRequest(20L, authenticatedEmail);
+
+        assertNotNull(result);
+        assertEquals(AdoptionRequestStatus.CANCELLED, result.getStatus());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNonOwnerNonAdminTriesToCancel() {
+        String authenticatedEmail = "intruder@email.com";
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+
+        User intruder = mock(User.class);
+        when(intruder.getId()).thenReturn(88L);
+        when(intruder.getUserType()).thenReturn(br.com.adoption.entity.UserType.COMMON);
+
+        AdoptionRequest request = new AdoptionRequest();
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(intruder));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+
+        OnlyOwnerCanManageAdoptionRequestException exception = assertThrows(
+                OnlyOwnerCanManageAdoptionRequestException.class,
+                () -> adoptionRequestService.cancelRequest(20L, authenticatedEmail)
+        );
+
+        assertEquals("Only the request owner or admin can cancel this request", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCancellingNonPendingRequest() {
+        String authenticatedEmail = "requester@email.com";
+
+        User requester = mock(User.class);
+        when(requester.getId()).thenReturn(2L);
+        when(requester.getUserType()).thenReturn(br.com.adoption.entity.UserType.COMMON);
+
+        AdoptionRequest request = new AdoptionRequest();
+        request.setUser(requester);
+        request.setStatus(AdoptionRequestStatus.APPROVED);
+
+        when(userRepository.findByEmail(authenticatedEmail)).thenReturn(Optional.of(requester));
+        when(adoptionRequestRepository.findById(20L)).thenReturn(Optional.of(request));
+
+        AdoptionRequestNotPendingException exception = assertThrows(
+                AdoptionRequestNotPendingException.class,
+                () -> adoptionRequestService.cancelRequest(20L, authenticatedEmail)
+        );
+
+        assertEquals("Only pending requests can be canceled", exception.getMessage());
     }
 }

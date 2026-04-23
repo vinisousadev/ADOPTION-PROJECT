@@ -1,6 +1,7 @@
 package br.com.adoption.service.impl;
 
 import br.com.adoption.dto.request.CreateAnimalRequest;
+import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.entity.Animal;
@@ -12,9 +13,12 @@ import br.com.adoption.mapper.AnimalMapper;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import br.com.adoption.service.AnimalService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,8 +39,34 @@ public class AnimalServiceImpl implements AnimalService {
     }
 
     @Override
+    public Page<AnimalResponse> getAvailableAnimals(Pageable pageable) {
+        return animalRepository.findByStatus("AVAILABLE", pageable).map(AnimalMapper::toResponse);
+    }
+
+    @Override
+    public List<AnimalResponse> getMyAnimals(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return AnimalMapper.toResponseList(animalRepository.findByUser_IdOrderById(user.getId()));
+    }
+
+    @Override
+    public Page<AnimalResponse> getMyAnimals(String userEmail, Pageable pageable) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return animalRepository.findByUser_Id(user.getId(), pageable).map(AnimalMapper::toResponse);
+    }
+
+    @Override
     public List<AnimalResponse> getAllAnimals() {
         return AnimalMapper.toResponseList(animalRepository.findAll(Sort.by("id")));
+    }
+
+    @Override
+    public Page<AnimalResponse> getAllAnimals(Pageable pageable) {
+        return animalRepository.findAll(pageable).map(AnimalMapper::toResponse);
     }
 
     @Override
@@ -74,6 +104,7 @@ public class AnimalServiceImpl implements AnimalService {
         Animal animal = AnimalMapper.toEntity(request);
         animal.setUser(user);
         animal.setStatus("AVAILABLE");
+        animal.setRegistrationDate(LocalDateTime.now());
 
         Animal savedAnimal = animalRepository.save(animal);
         return AnimalMapper.toResponse(savedAnimal);
@@ -103,6 +134,54 @@ public class AnimalServiceImpl implements AnimalService {
 
         Animal updatedAnimal = animalRepository.save(animal);
         return AnimalMapper.toResponse(updatedAnimal);
+    }
+
+    @Override
+    public AnimalResponse patch(Long animalId, PatchAnimalRequest request, String userEmail) {
+        Animal animal = animalRepository.findById(animalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
+
+        User authenticatedUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        validateOwnerOrAdmin(animal, authenticatedUser);
+
+        if (request.getAnimalName() != null) {
+            animal.setAnimalName(request.getAnimalName());
+        }
+        if (request.getSpecies() != null) {
+            animal.setSpecies(request.getSpecies());
+        }
+        if (request.getBreed() != null) {
+            animal.setBreed(request.getBreed());
+        }
+        if (request.getBirthDate() != null) {
+            animal.setBirthDate(request.getBirthDate());
+        }
+        if (request.getAge() != null) {
+            animal.setAge(request.getAge());
+        }
+        if (request.getAnimalSize() != null) {
+            animal.setAnimalSize(request.getAnimalSize());
+        }
+        if (request.getSex() != null) {
+            animal.setSex(request.getSex());
+        }
+        if (request.getWeightKg() != null) {
+            animal.setWeightKg(request.getWeightKg());
+        }
+        if (request.getVaccinated() != null) {
+            animal.setVaccinated(request.getVaccinated());
+        }
+        if (request.getNeutered() != null) {
+            animal.setNeutered(request.getNeutered());
+        }
+        if (request.getDescription() != null) {
+            animal.setDescription(request.getDescription());
+        }
+
+        Animal patchedAnimal = animalRepository.save(animal);
+        return AnimalMapper.toResponse(patchedAnimal);
     }
 
     @Override
