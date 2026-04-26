@@ -3,6 +3,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -61,8 +63,9 @@ public class Animal {
     @Column(name = "DESCRIPTION", length = 500)
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "STATUS", nullable = false, length = 20)
-    private String status;
+    private AnimalStatus status;
 
     @Column(name = "REGISTRATION_DATE", nullable = false)
     private LocalDateTime registrationDate;
@@ -166,11 +169,11 @@ public class Animal {
         this.description = description;
     }
 
-    public String getStatus() {
+    public AnimalStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(AnimalStatus status) {
         this.status = status;
     }
 

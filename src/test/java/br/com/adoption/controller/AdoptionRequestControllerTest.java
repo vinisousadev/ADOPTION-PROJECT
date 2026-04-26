@@ -63,7 +63,7 @@ class AdoptionRequestControllerTest {
         request2.setMessage("Request 2");
         request2.setStatus(AdoptionRequestStatus.APPROVED);
 
-        when(adoptionRequestService.getAllRequests(any())).thenReturn(new PageImpl<>(List.of(request1, request2)));
+        when(adoptionRequestService.getAllRequests(any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of(request1, request2)));
 
         mockMvc.perform(get("/adoption-requests"))
                 .andExpect(status().isOk())
@@ -71,6 +71,28 @@ class AdoptionRequestControllerTest {
                 .andExpect(jsonPath("$.content[0].message").value("Request 1"))
                 .andExpect(jsonPath("$.content[1].message").value("Request 2"))
                 .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnAllRequestsWithFilters() throws Exception {
+        AdoptionRequestResponse response = new AdoptionRequestResponse();
+        response.setMessage("Filtered request");
+        response.setStatus(AdoptionRequestStatus.PENDING);
+        response.setAnimalId(10L);
+        response.setUserId(2L);
+
+        when(adoptionRequestService.getAllRequests(any(), eq(AdoptionRequestStatus.PENDING), eq(10L), eq(2L)))
+                .thenReturn(new PageImpl<>(List.of(response)));
+
+        mockMvc.perform(get("/adoption-requests")
+                        .param("status", "PENDING")
+                        .param("animalId", "10")
+                        .param("userId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.content[0].animalId").value(10))
+                .andExpect(jsonPath("$.content[0].userId").value(2));
     }
 
     @Test

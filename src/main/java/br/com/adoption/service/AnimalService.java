@@ -4,6 +4,7 @@ import br.com.adoption.dto.request.CreateAnimalRequest;
 import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
+import br.com.adoption.entity.AnimalStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -12,7 +13,11 @@ import java.util.List;
 public interface AnimalService {
 
     List<AnimalResponse> getAvailableAnimals();
-    Page<AnimalResponse> getAvailableAnimals(Pageable pageable);
+    Page<AnimalResponse> getAvailableAnimals(Pageable pageable,
+                                             String species,
+                                             String city,
+                                             String animalSize,
+                                             Character sex);
     List<AnimalResponse> getMyAnimals(String userEmail);
     Page<AnimalResponse> getMyAnimals(String userEmail, Pageable pageable);
 
@@ -26,5 +31,10 @@ public interface AnimalService {
     AnimalResponse delete(Long animalId, String userEmail);
 
     List<AnimalResponse> getAllAnimals();
-    Page<AnimalResponse> getAllAnimals(Pageable pageable);
+    Page<AnimalResponse> getAllAnimals(Pageable pageable,
+                                       AnimalStatus status,
+                                       String species,
+                                       String city,
+                                       String animalSize,
+                                       Character sex);
 }

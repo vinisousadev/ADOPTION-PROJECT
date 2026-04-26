@@ -5,6 +5,7 @@ import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.entity.Animal;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.entity.User;
 import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.OnlyOwnerCanManageAnimalException;
@@ -17,7 +18,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,14 +51,14 @@ class AnimalServiceImplTest {
         Animal animal1 = new Animal();
         animal1.setAnimalName("Rex");
         animal1.setSpecies("Dog");
-        animal1.setStatus("AVAILABLE");
+        animal1.setStatus(AnimalStatus.AVAILABLE);
 
         Animal animal2 = new Animal();
         animal2.setAnimalName("Mia");
         animal2.setSpecies("Cat");
-        animal2.setStatus("AVAILABLE");
+        animal2.setStatus(AnimalStatus.AVAILABLE);
 
-        when(animalRepository.findByStatus("AVAILABLE")).thenReturn(List.of(animal1, animal2));
+        when(animalRepository.findByStatus(AnimalStatus.AVAILABLE)).thenReturn(List.of(animal1, animal2));
 
         List<AnimalResponse> result = animalService.getAvailableAnimals();
 
@@ -60,9 +66,34 @@ class AnimalServiceImplTest {
         assertEquals(2, result.size());
         assertEquals("Rex", result.get(0).getAnimalName());
         assertEquals("Mia", result.get(1).getAnimalName());
-        assertEquals("AVAILABLE", result.get(0).getStatus());
+        assertEquals(AnimalStatus.AVAILABLE, result.get(0).getStatus());
 
-        verify(animalRepository, times(1)).findByStatus("AVAILABLE");
+        verify(animalRepository, times(1)).findByStatus(AnimalStatus.AVAILABLE);
+    }
+
+    @Test
+    void shouldReturnFilteredAvailableAnimals() {
+        Animal animal = new Animal();
+        animal.setAnimalName("Mia");
+        animal.setSpecies("Cat");
+        animal.setStatus(AnimalStatus.AVAILABLE);
+
+        when(animalRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(animal)));
+
+        Page<AnimalResponse> result = animalService.getAvailableAnimals(
+                PageRequest.of(0, 10),
+                "Cat",
+                "Sao Paulo",
+                "SMALL",
+                'F'
+        );
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Mia", result.getContent().getFirst().getAnimalName());
+
+        verify(animalRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -127,6 +158,32 @@ class AnimalServiceImplTest {
     }
 
     @Test
+    void shouldReturnFilteredAnimalsForAdminList() {
+        Animal animal = new Animal();
+        animal.setAnimalName("Rex");
+        animal.setSpecies("Dog");
+        animal.setStatus(AnimalStatus.ADOPTED);
+
+        when(animalRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(animal)));
+
+        Page<AnimalResponse> result = animalService.getAllAnimals(
+                PageRequest.of(0, 10),
+                AnimalStatus.ADOPTED,
+                "Dog",
+                "Campinas",
+                "MEDIUM",
+                'M'
+        );
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(AnimalStatus.ADOPTED, result.getContent().getFirst().getStatus());
+
+        verify(animalRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
     void shouldReturnAvailableAnimalByIdWithoutAuthenticatedUser() {
         User owner = mock(User.class);
         when(owner.getId()).thenReturn(1L);
@@ -134,7 +191,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -145,7 +202,7 @@ class AnimalServiceImplTest {
         assertNotNull(result);
         assertEquals("Rex", result.getAnimalName());
         assertEquals("Dog", result.getSpecies());
-        assertEquals("AVAILABLE", result.getStatus());
+        assertEquals(AnimalStatus.AVAILABLE, result.getStatus());
         assertEquals(1L, result.getUserId());
 
         verify(userRepository, never()).findByEmail(anyString());
@@ -160,7 +217,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("ADOPTED");
+        animal.setStatus(AnimalStatus.ADOPTED);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -171,7 +228,7 @@ class AnimalServiceImplTest {
 
         assertNotNull(result);
         assertEquals("Rex", result.getAnimalName());
-        assertEquals("ADOPTED", result.getStatus());
+        assertEquals(AnimalStatus.ADOPTED, result.getStatus());
         assertEquals(1L, result.getUserId());
     }
 
@@ -185,7 +242,7 @@ class AnimalServiceImplTest {
         when(intruder.getUserType()).thenReturn(UserType.COMMON);
 
         Animal animal = new Animal();
-        animal.setStatus("ADOPTED");
+        animal.setStatus(AnimalStatus.ADOPTED);
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -230,12 +287,12 @@ class AnimalServiceImplTest {
         assertNotNull(result);
         assertEquals("Rex", result.getAnimalName());
         assertEquals("Dog", result.getSpecies());
-        assertEquals("AVAILABLE", result.getStatus());
+        assertEquals(AnimalStatus.AVAILABLE, result.getStatus());
         assertEquals(1L, result.getUserId());
 
         assertEquals("Rex", capturedAnimal.getAnimalName());
         assertEquals("Dog", capturedAnimal.getSpecies());
-        assertEquals("AVAILABLE", capturedAnimal.getStatus());
+        assertEquals(AnimalStatus.AVAILABLE, capturedAnimal.getStatus());
         assertEquals(owner, capturedAnimal.getUser());
         assertNotNull(capturedAnimal.getRegistrationDate());
     }
@@ -279,7 +336,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -294,7 +351,7 @@ class AnimalServiceImplTest {
         assertEquals("Dog", result.getSpecies());
         assertEquals("Labrador", result.getBreed());
         assertEquals(2, result.getAge());
-        assertEquals("AVAILABLE", result.getStatus());
+        assertEquals(AnimalStatus.AVAILABLE, result.getStatus());
         assertEquals(1L, result.getUserId());
 
         verify(animalRepository, times(1)).save(animal);
@@ -317,7 +374,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Mia");
         animal.setSpecies("Cat");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -347,7 +404,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setDescription("Old");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -403,7 +460,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -414,8 +471,8 @@ class AnimalServiceImplTest {
         AnimalResponse result = animalService.delete(10L, "owner@email.com");
 
         assertNotNull(result);
-        assertEquals("REMOVED", result.getStatus());
-        assertEquals("REMOVED", animal.getStatus());
+        assertEquals(AnimalStatus.REMOVED, result.getStatus());
+        assertEquals(AnimalStatus.REMOVED, animal.getStatus());
         assertEquals(1L, result.getUserId());
 
         verify(animalRepository, times(1)).save(animal);
@@ -432,7 +489,7 @@ class AnimalServiceImplTest {
         Animal animal = new Animal();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
         animal.setUser(owner);
 
@@ -443,7 +500,7 @@ class AnimalServiceImplTest {
         AnimalResponse result = animalService.delete(10L, "admin@email.com");
 
         assertNotNull(result);
-        assertEquals("REMOVED", result.getStatus());
+        assertEquals(AnimalStatus.REMOVED, result.getStatus());
 
         verify(animalRepository, times(1)).save(animal);
     }

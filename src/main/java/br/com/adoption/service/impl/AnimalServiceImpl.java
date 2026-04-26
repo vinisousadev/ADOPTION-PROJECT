@@ -5,6 +5,7 @@ import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
 import br.com.adoption.entity.Animal;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.entity.User;
 import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.OnlyOwnerCanManageAnimalException;
@@ -12,10 +13,12 @@ import br.com.adoption.exception.ResourceNotFoundException;
 import br.com.adoption.mapper.AnimalMapper;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
+import jakarta.persistence.criteria.JoinType;
 import br.com.adoption.service.AnimalService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,12 +38,19 @@ public class AnimalServiceImpl implements AnimalService {
 
     @Override
     public List<AnimalResponse> getAvailableAnimals() {
-        return AnimalMapper.toResponseList(animalRepository.findByStatus("AVAILABLE"));
+        return AnimalMapper.toResponseList(animalRepository.findByStatus(AnimalStatus.AVAILABLE));
     }
 
     @Override
-    public Page<AnimalResponse> getAvailableAnimals(Pageable pageable) {
-        return animalRepository.findByStatus("AVAILABLE", pageable).map(AnimalMapper::toResponse);
+    public Page<AnimalResponse> getAvailableAnimals(Pageable pageable,
+                                                    String species,
+                                                    String city,
+                                                    String animalSize,
+                                                    Character sex) {
+        return animalRepository.findAll(
+                buildAnimalFilterSpecification(AnimalStatus.AVAILABLE, species, city, animalSize, sex),
+                pageable
+        ).map(AnimalMapper::toResponse);
     }
 
     @Override
@@ -65,8 +75,16 @@ public class AnimalServiceImpl implements AnimalService {
     }
 
     @Override
-    public Page<AnimalResponse> getAllAnimals(Pageable pageable) {
-        return animalRepository.findAll(pageable).map(AnimalMapper::toResponse);
+    public Page<AnimalResponse> getAllAnimals(Pageable pageable,
+                                              AnimalStatus status,
+                                              String species,
+                                              String city,
+                                              String animalSize,
+                                              Character sex) {
+        return animalRepository.findAll(
+                buildAnimalFilterSpecification(status, species, city, animalSize, sex),
+                pageable
+        ).map(AnimalMapper::toResponse);
     }
 
     @Override
@@ -74,7 +92,7 @@ public class AnimalServiceImpl implements AnimalService {
         Animal animal = animalRepository.findById(animalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
 
-        if ("AVAILABLE".equals(animal.getStatus())) {
+        if (animal.getStatus() == AnimalStatus.AVAILABLE) {
             return AnimalMapper.toResponse(animal);
         }
 
@@ -103,7 +121,7 @@ public class AnimalServiceImpl implements AnimalService {
 
         Animal animal = AnimalMapper.toEntity(request);
         animal.setUser(user);
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setRegistrationDate(LocalDateTime.now());
 
         Animal savedAnimal = animalRepository.save(animal);
@@ -194,7 +212,7 @@ public class AnimalServiceImpl implements AnimalService {
 
         validateOwnerOrAdmin(animal, authenticatedUser);
 
-        animal.setStatus("REMOVED");
+        animal.setStatus(AnimalStatus.REMOVED);
 
         Animal deletedAnimal = animalRepository.save(animal);
         return AnimalMapper.toResponse(deletedAnimal);
@@ -208,5 +226,58 @@ public class AnimalServiceImpl implements AnimalService {
         if (!isAdmin && !isOwner) {
             throw new OnlyOwnerCanManageAnimalException("Only the animal owner or admin can manage this animal");
         }
+    }
+
+    private Specification<Animal> buildAnimalFilterSpecification(AnimalStatus status,
+                                                                 String species,
+                                                                 String city,
+                                                                 String animalSize,
+                                                                 Character sex) {
+        return Specification.where(hasStatus(status))
+                .and(hasSpecies(species))
+                .and(hasCity(city))
+                .and(hasAnimalSize(animalSize))
+                .and(hasSex(sex));
+    }
+
+    private Specification<Animal> hasStatus(AnimalStatus status) {
+        return (root, query, criteriaBuilder) ->
+                status == null ? null : criteriaBuilder.equal(root.get("status"), status);
+    }
+
+    private Specification<Animal> hasSpecies(String species) {
+        return (root, query, criteriaBuilder) ->
+                isBlank(species)
+                        ? null
+                        : criteriaBuilder.equal(criteriaBuilder.upper(root.get("species")), species.trim().toUpperCase());
+    }
+
+    private Specification<Animal> hasCity(String city) {
+        return (root, query, criteriaBuilder) ->
+                isBlank(city)
+                        ? null
+                        : criteriaBuilder.equal(
+                        criteriaBuilder.upper(root.join("user", JoinType.LEFT).get("city")),
+                        city.trim().toUpperCase()
+                );
+    }
+
+    private Specification<Animal> hasAnimalSize(String animalSize) {
+        return (root, query, criteriaBuilder) ->
+                isBlank(animalSize)
+                        ? null
+                        : criteriaBuilder.equal(
+                        criteriaBuilder.upper(root.get("animalSize")),
+                        animalSize.trim().toUpperCase()
+                );
+    }
+
+    private Specification<Animal> hasSex(Character sex) {
+        return (root, query, criteriaBuilder) ->
+                sex == null ? null : criteriaBuilder.equal(root.get("sex"), sex);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

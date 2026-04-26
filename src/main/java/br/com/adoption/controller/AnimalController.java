@@ -4,6 +4,7 @@ import br.com.adoption.dto.request.CreateAnimalRequest;
 import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.service.AnimalService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -25,8 +26,13 @@ public class AnimalController {
     }
 
     @GetMapping("/available")
-    public PagedModel<AnimalResponse> getAvailableAnimals(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return new PagedModel<>(animalService.getAvailableAnimals(pageable));
+    public PagedModel<AnimalResponse> getAvailableAnimals(
+            @RequestParam(required = false) String species,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String animalSize,
+            @RequestParam(required = false) Character sex,
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(animalService.getAvailableAnimals(pageable, species, city, animalSize, sex));
     }
 
     @GetMapping("/mine")
@@ -69,7 +75,13 @@ public class AnimalController {
     }
 
     @GetMapping
-    public PagedModel<AnimalResponse> getAllAnimals(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return new PagedModel<>(animalService.getAllAnimals(pageable));
+    public PagedModel<AnimalResponse> getAllAnimals(
+            @RequestParam(required = false) AnimalStatus status,
+            @RequestParam(required = false) String species,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String animalSize,
+            @RequestParam(required = false) Character sex,
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(animalService.getAllAnimals(pageable, status, species, city, animalSize, sex));
     }
 }

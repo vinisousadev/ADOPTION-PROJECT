@@ -1,5 +1,7 @@
 package br.com.adoption.dto.response;
 
+import br.com.adoption.entity.AnimalStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,7 +20,7 @@ public class AnimalResponse {
     private Character vaccinated;
     private Character neutered;
     private String description;
-    private String status;
+    private AnimalStatus status;
     private LocalDateTime registrationDate;
     private Long userId;
 
@@ -121,11 +123,11 @@ public class AnimalResponse {
         this.description = description;
     }
 
-    public String getStatus() {
+    public AnimalStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(AnimalStatus status) {
         this.status = status;
     }
 

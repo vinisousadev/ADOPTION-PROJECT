@@ -5,6 +5,7 @@ import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.entity.User;
 import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.AdoptionRequestNotPendingException;
@@ -21,6 +22,7 @@ import br.com.adoption.service.AdoptionRequestService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,8 +50,14 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     }
 
     @Override
-    public Page<AdoptionRequestResponse> getAllRequests(Pageable pageable) {
-        return adoptionRequestRepository.findAll(pageable).map(AdoptionRequestMapper::toResponse);
+    public Page<AdoptionRequestResponse> getAllRequests(Pageable pageable,
+                                                        AdoptionRequestStatus status,
+                                                        Long animalId,
+                                                        Long userId) {
+        return adoptionRequestRepository.findAll(
+                buildRequestFilterSpecification(status, animalId, userId),
+                pageable
+        ).map(AdoptionRequestMapper::toResponse);
     }
 
     @Override
@@ -81,7 +89,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         Animal animal = animalRepository.findById(request.getAnimalId())
                 .orElseThrow(() -> new ResourceNotFoundException("Animal not found"));
 
-        if (!"AVAILABLE".equals(animal.getStatus())) {
+        if (animal.getStatus() != AnimalStatus.AVAILABLE) {
             throw new AnimalNotAvailableException("Animal is not available for adoption");
         }
 
@@ -135,7 +143,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         request.setResponseDate(now);
 
         Animal animal = request.getAnimal();
-        animal.setStatus("ADOPTED");
+        animal.setStatus(AnimalStatus.ADOPTED);
 
         animalRepository.save(animal);
         AdoptionRequest approvedRequest = adoptionRequestRepository.save(request);
@@ -206,5 +214,32 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
 
         AdoptionRequest cancelledRequest = adoptionRequestRepository.save(request);
         return AdoptionRequestMapper.toResponse(cancelledRequest);
+    }
+
+    private Specification<AdoptionRequest> buildRequestFilterSpecification(AdoptionRequestStatus status,
+                                                                           Long animalId,
+                                                                           Long userId) {
+        return hasStatus(status)
+                .and(hasAnimalId(animalId))
+                .and(hasUserId(userId));
+    }
+
+    private Specification<AdoptionRequest> hasStatus(AdoptionRequestStatus status) {
+        return (root, query, criteriaBuilder) ->
+                status == null ? criteriaBuilder.conjunction() : criteriaBuilder.equal(root.get("status"), status);
+    }
+
+    private Specification<AdoptionRequest> hasAnimalId(Long animalId) {
+        return (root, query, criteriaBuilder) ->
+                animalId == null
+                        ? criteriaBuilder.conjunction()
+                        : criteriaBuilder.equal(root.get("animal").get("id"), animalId);
+    }
+
+    private Specification<AdoptionRequest> hasUserId(Long userId) {
+        return (root, query, criteriaBuilder) ->
+                userId == null
+                        ? criteriaBuilder.conjunction()
+                        : criteriaBuilder.equal(root.get("user").get("id"), userId);
     }
 }

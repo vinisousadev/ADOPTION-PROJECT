@@ -5,6 +5,7 @@ import br.com.adoption.dto.response.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.entity.User;
 import br.com.adoption.exception.AdoptionRequestNotPendingException;
 import br.com.adoption.exception.AnimalNotAvailableException;
@@ -20,7 +21,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +69,30 @@ class AdoptionRequestServiceImplTest {
         assertEquals("Request 2", result.get(1).getMessage());
 
         verify(adoptionRequestRepository, times(1)).findAll(Sort.by("id"));
+    }
+
+    @Test
+    void shouldReturnFilteredRequests() {
+        AdoptionRequest request = new AdoptionRequest();
+        request.setMessage("Filtered request");
+        request.setStatus(AdoptionRequestStatus.PENDING);
+
+        when(adoptionRequestRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(request)));
+
+        Page<AdoptionRequestResponse> result = adoptionRequestService.getAllRequests(
+                PageRequest.of(0, 10),
+                AdoptionRequestStatus.PENDING,
+                10L,
+                2L
+        );
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Filtered request", result.getContent().getFirst().getMessage());
+        assertEquals(AdoptionRequestStatus.PENDING, result.getContent().getFirst().getStatus());
+
+        verify(adoptionRequestRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -139,7 +169,7 @@ class AdoptionRequestServiceImplTest {
 
         Animal animal = spy(new Animal());
         doReturn(10L).when(animal).getId();
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -179,7 +209,7 @@ class AdoptionRequestServiceImplTest {
         when(owner.getId()).thenReturn(1L);
 
         Animal animal = new Animal();
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -207,7 +237,7 @@ class AdoptionRequestServiceImplTest {
 
         Animal animal = spy(new Animal());
         doReturn(10L).when(animal).getId();
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -230,7 +260,7 @@ class AdoptionRequestServiceImplTest {
         requestDto.setAnimalId(10L);
 
         Animal animal = new Animal();
-        animal.setStatus("ADOPTED");
+        animal.setStatus(AnimalStatus.ADOPTED);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
 
@@ -311,7 +341,7 @@ class AdoptionRequestServiceImplTest {
 
         Animal animal = spy(new Animal());
         doReturn(10L).when(animal).getId();
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setUser(owner);
 
         AdoptionRequest approvedRequest = spy(new AdoptionRequest());
@@ -341,7 +371,7 @@ class AdoptionRequestServiceImplTest {
         assertEquals(2L, result.getUserId());
         assertNotNull(result.getResponseDate());
 
-        assertEquals("ADOPTED", animal.getStatus());
+        assertEquals(AnimalStatus.ADOPTED, animal.getStatus());
         assertEquals(AdoptionRequestStatus.REJECTED, pendingRequest.getStatus());
         assertNotNull(pendingRequest.getResponseDate());
 
@@ -394,7 +424,7 @@ class AdoptionRequestServiceImplTest {
         Animal animal = spy(new Animal());
         doReturn(10L).when(animal).getId();
         animal.setUser(owner);
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
 
         AdoptionRequest request = spy(new AdoptionRequest());
         doReturn(20L).when(request).getId();

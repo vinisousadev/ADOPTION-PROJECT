@@ -4,6 +4,7 @@ import br.com.adoption.dto.request.CreateAnimalRequest;
 import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
+import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.exception.GlobalExceptionHandler;
 import br.com.adoption.exception.OnlyOwnerCanManageAnimalException;
 import br.com.adoption.exception.ResourceNotFoundException;
@@ -62,14 +63,14 @@ class AnimalControllerTest {
         AnimalResponse animal1 = new AnimalResponse();
         animal1.setAnimalName("Rex");
         animal1.setSpecies("Dog");
-        animal1.setStatus("AVAILABLE");
+        animal1.setStatus(AnimalStatus.AVAILABLE);
 
         AnimalResponse animal2 = new AnimalResponse();
         animal2.setAnimalName("Mia");
         animal2.setSpecies("Cat");
-        animal2.setStatus("AVAILABLE");
+        animal2.setStatus(AnimalStatus.AVAILABLE);
 
-        when(animalService.getAvailableAnimals(any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
+        when(animalService.getAvailableAnimals(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
 
         mockMvc.perform(get("/animals/available"))
                 .andExpect(status().isOk())
@@ -89,7 +90,7 @@ class AnimalControllerTest {
         animal2.setAnimalName("Mia");
         animal2.setSpecies("Cat");
 
-        when(animalService.getAllAnimals(any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
+        when(animalService.getAllAnimals(any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of(animal1, animal2)));
 
         mockMvc.perform(get("/animals"))
                 .andExpect(status().isOk())
@@ -120,11 +121,52 @@ class AnimalControllerTest {
     }
 
     @Test
+    void shouldReturnAvailableAnimalsWithFilters() throws Exception {
+        AnimalResponse animal = new AnimalResponse();
+        animal.setAnimalName("Mia");
+        animal.setSpecies("Cat");
+        animal.setStatus(AnimalStatus.AVAILABLE);
+
+        when(animalService.getAvailableAnimals(any(), eq("Cat"), eq("Sao Paulo"), eq("SMALL"), eq('F')))
+                .thenReturn(new PageImpl<>(List.of(animal)));
+
+        mockMvc.perform(get("/animals/available")
+                        .param("species", "Cat")
+                        .param("city", "Sao Paulo")
+                        .param("animalSize", "SMALL")
+                        .param("sex", "F"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].animalName").value("Mia"));
+    }
+
+    @Test
+    void shouldReturnAllAnimalsWithFilters() throws Exception {
+        AnimalResponse animal = new AnimalResponse();
+        animal.setAnimalName("Rex");
+        animal.setSpecies("Dog");
+        animal.setStatus(AnimalStatus.ADOPTED);
+
+        when(animalService.getAllAnimals(any(), eq(AnimalStatus.ADOPTED), eq("Dog"), eq("Campinas"), eq("MEDIUM"), eq('M')))
+                .thenReturn(new PageImpl<>(List.of(animal)));
+
+        mockMvc.perform(get("/animals")
+                        .param("status", "ADOPTED")
+                        .param("species", "Dog")
+                        .param("city", "Campinas")
+                        .param("animalSize", "MEDIUM")
+                        .param("sex", "M"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("ADOPTED"));
+    }
+
+    @Test
     void shouldReturnAnimalById() throws Exception {
         AnimalResponse animal = new AnimalResponse();
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
-        animal.setStatus("AVAILABLE");
+        animal.setStatus(AnimalStatus.AVAILABLE);
         animal.setUserId(1L);
 
         when(animalService.getById(eq(10L), anyString())).thenReturn(animal);
@@ -151,7 +193,7 @@ class AnimalControllerTest {
         savedAnimal.setVaccinated('Y');
         savedAnimal.setNeutered('N');
         savedAnimal.setDescription("Very friendly");
-        savedAnimal.setStatus("AVAILABLE");
+        savedAnimal.setStatus(AnimalStatus.AVAILABLE);
         savedAnimal.setRegistrationDate(LocalDateTime.now());
         savedAnimal.setUserId(1L);
 
@@ -189,7 +231,7 @@ class AnimalControllerTest {
         AnimalResponse updatedAnimal = new AnimalResponse();
         updatedAnimal.setAnimalName("Rex atualizado");
         updatedAnimal.setSpecies("Dog");
-        updatedAnimal.setStatus("AVAILABLE");
+        updatedAnimal.setStatus(AnimalStatus.AVAILABLE);
         updatedAnimal.setUserId(1L);
 
         when(animalService.update(eq(10L), any(UpdateAnimalRequest.class), anyString()))
@@ -228,7 +270,7 @@ class AnimalControllerTest {
         patchedAnimal.setAnimalName("Rex novo nome");
         patchedAnimal.setSpecies("Dog");
         patchedAnimal.setDescription("Apenas descrição alterada");
-        patchedAnimal.setStatus("AVAILABLE");
+        patchedAnimal.setStatus(AnimalStatus.AVAILABLE);
         patchedAnimal.setUserId(1L);
 
         when(animalService.patch(eq(10L), any(PatchAnimalRequest.class), anyString()))
@@ -279,7 +321,7 @@ class AnimalControllerTest {
         AnimalResponse deletedAnimal = new AnimalResponse();
         deletedAnimal.setAnimalName("Rex");
         deletedAnimal.setSpecies("Dog");
-        deletedAnimal.setStatus("REMOVED");
+        deletedAnimal.setStatus(AnimalStatus.REMOVED);
         deletedAnimal.setUserId(1L);
 
         when(animalService.delete(eq(10L), anyString())).thenReturn(deletedAnimal);

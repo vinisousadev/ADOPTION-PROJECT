@@ -2,6 +2,7 @@ package br.com.adoption.controller;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
 import br.com.adoption.dto.response.AdoptionRequestResponse;
+import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.service.AdoptionRequestService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -23,8 +24,12 @@ public class AdoptionRequestController {
     }
 
     @GetMapping
-    public PagedModel<AdoptionRequestResponse> getAllRequests(@PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return new PagedModel<>(adoptionRequestService.getAllRequests(pageable));
+    public PagedModel<AdoptionRequestResponse> getAllRequests(
+            @RequestParam(required = false) AdoptionRequestStatus status,
+            @RequestParam(required = false) Long animalId,
+            @RequestParam(required = false) Long userId,
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(adoptionRequestService.getAllRequests(pageable, status, animalId, userId));
     }
 
     @GetMapping("/{id}")
