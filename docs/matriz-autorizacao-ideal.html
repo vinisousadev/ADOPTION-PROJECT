@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Matriz Ideal de Autorização</title>
+  <title>Matriz Atual de Autorizacao</title>
   <style>
     :root {
       --bg: #f7f7f5;
@@ -52,15 +52,15 @@
   </style>
 </head>
 <body>
-  <h1>Matriz Ideal de Autorização</h1>
+  <h1>Matriz Atual de Autorizacao</h1>
   <p>Projeto ADOPTION-PROJECT-NEW</p>
 
   <table>
     <thead>
       <tr>
         <th>Endpoint</th>
-        <th>Método</th>
-        <th>Público</th>
+        <th>Metodo</th>
+        <th>Publico</th>
         <th>COMMON</th>
         <th>ADMIN</th>
         <th>OWNER do recurso</th>
@@ -69,30 +69,32 @@
     <tbody>
       <tr><td>/auth/login</td><td>POST</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
       <tr><td>/users</td><td>POST</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/users/me</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>Próprio usuário</td></tr>
-      <tr><td>/users</td><td>GET</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/users</td><td>GET</td><td>Nao</td><td>Nao</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/users/{id}</td><td>GET</td><td>Nao</td><td>Nao</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/users/{id}</td><td>PUT/PATCH/DELETE</td><td>Nao</td><td>Somente proprio usuario</td><td>Sim</td><td>Sim</td></tr>
       <tr><td>/animals/available</td><td>GET</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals/mine</td><td>GET</td><td>Nao</td><td>Sim</td><td>Sim</td><td>Proprios animais</td></tr>
       <tr><td>/animals/{id}</td><td>GET</td><td>Sim*</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
-      <tr><td>/animals</td><td>POST</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/animals/{id}</td><td>PUT</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
-      <tr><td>/animals/{id}</td><td>DELETE</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
-      <tr><td>/animals</td><td>GET</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals</td><td>POST</td><td>Nao</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animals/{id}</td><td>PUT/PATCH/DELETE</td><td>Nao</td><td>Somente dono</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/animals</td><td>GET</td><td>Nao</td><td>Nao</td><td>Sim</td><td>-</td></tr>
       <tr><td>/animal-photos</td><td>GET</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/animal-photos</td><td>POST</td><td>Não</td><td>Não**</td><td>Sim</td><td>Sim</td></tr>
-      <tr><td>/adoption-requests</td><td>POST</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/adoption-requests/{id}/approve</td><td>PATCH</td><td>Não</td><td>Não**</td><td>Sim***</td><td>Sim***</td></tr>
-      <tr><td>/adoption-requests/{id}/reject</td><td>PATCH</td><td>Não</td><td>Não**</td><td>Sim***</td><td>Sim***</td></tr>
-      <tr><td>/adoption-requests/mine</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/adoption-requests/received</td><td>GET</td><td>Não</td><td>Sim</td><td>Sim</td><td>-</td></tr>
-      <tr><td>/adoption-requests</td><td>GET (global)</td><td>Não</td><td>Não</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animal-photos/{id}</td><td>GET</td><td>Sim</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/animal-photos</td><td>POST</td><td>Nao</td><td>Somente dono do animal</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/animal-photos/{id}</td><td>PUT/PATCH/DELETE</td><td>Nao</td><td>Somente dono do animal</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/adoption-requests</td><td>POST</td><td>Nao</td><td>Sim</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/adoption-requests</td><td>GET</td><td>Nao</td><td>Nao</td><td>Sim</td><td>-</td></tr>
+      <tr><td>/adoption-requests/{id}</td><td>GET</td><td>Nao</td><td>Requester ou dono do animal</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/adoption-requests/{id}/approve</td><td>PATCH</td><td>Nao</td><td>Somente dono do animal</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/adoption-requests/{id}/reject</td><td>PATCH</td><td>Nao</td><td>Somente dono do animal</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>/adoption-requests/{id}/cancel</td><td>PATCH</td><td>Nao</td><td>Somente requester</td><td>Sim</td><td>Sim</td></tr>
     </tbody>
   </table>
 
   <div class="note">
-    <p>* Público apenas se o animal estiver AVAILABLE; se não estiver, apenas OWNER/ADMIN.</p>
-    <p>** COMMON apenas quando for OWNER do recurso.</p>
-    <p>*** Regra sugerida: OWNER do animal ou ADMIN.</p>
-    <p>Respostas ideais: 401 sem token; 403 sem permissão; 404 para ocultar recurso privado quando aplicável.</p>
+    <p>* Publico apenas se o animal estiver AVAILABLE; se nao estiver, apenas OWNER/ADMIN.</p>
+    <p>As respostas esperadas seguem o padrao do backend: 401 sem token, 403 sem permissao, 404 para recurso nao encontrado e 409 para conflitos de regra de negocio.</p>
+    <p>O H2 Console esta liberado no ambiente atual para desenvolvimento. Antes de producao, o ideal e restringir por perfil ou desabilitar.</p>
   </div>
 </body>
 </html>
