@@ -65,7 +65,7 @@ class UserControllerTest {
         user2.setEmail("maria@email.com");
         user2.setUserType(UserType.COMMON);
 
-        when(userService.getAllUsers(any())).thenReturn(new PageImpl<>(List.of(user1, user2)));
+        when(userService.getAllUsers(any(), any(), any())).thenReturn(new PageImpl<>(List.of(user1, user2)));
 
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
@@ -73,6 +73,26 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Joao"))
                 .andExpect(jsonPath("$.content[1].name").value("Maria"))
                 .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnAllUsersWithFilters() throws Exception {
+        UserResponse user = new UserResponse();
+        user.setName("Joao");
+        user.setEmail("joao@email.com");
+        user.setUserType(UserType.COMMON);
+
+        when(userService.getAllUsers(any(), any(), any())).thenReturn(new PageImpl<>(List.of(user)));
+
+        mockMvc.perform(get("/users")
+                        .param("name", "jo")
+                        .param("email", "email.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Joao"))
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+
+        verify(userService).getAllUsers(any(), eq("jo"), eq("email.com"));
     }
 
     @Test

@@ -15,7 +15,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -59,6 +63,26 @@ class UserServiceImplTest {
         assertEquals("Maria", result.get(1).getName());
 
         verify(userRepository, times(1)).findAll(Sort.by("id"));
+    }
+
+    @Test
+    void shouldReturnFilteredUsersPage() {
+        User user = new User();
+        user.setName("Joao");
+        user.setEmail("joao@email.com");
+        user.setUserType(UserType.COMMON);
+
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by("id"));
+
+        when(userRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(user), pageable, 1));
+
+        Page<UserResponse> result = userService.getAllUsers(pageable, "jo", "email.com");
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Joao", result.getContent().getFirst().getName());
+        verify(userRepository).findAll(any(Specification.class), eq(pageable));
     }
 
     @Test

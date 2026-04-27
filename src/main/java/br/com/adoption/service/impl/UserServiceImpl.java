@@ -14,6 +14,7 @@ import br.com.adoption.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -39,8 +40,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(UserMapper::toResponse);
+    public Page<UserResponse> getAllUsers(Pageable pageable, String name, String email) {
+        return userRepository.findAll(buildUserFilterSpecification(name, email), pageable)
+                .map(UserMapper::toResponse);
     }
 
     @Override
@@ -142,5 +144,33 @@ public class UserServiceImpl implements UserService {
         if (!isAdmin && !isOwner) {
             throw new OnlyOwnerCanManageUserException("Only the user owner or admin can manage this user");
         }
+    }
+
+    private Specification<User> buildUserFilterSpecification(String name, String email) {
+        return hasName(name).and(hasEmail(email));
+    }
+
+    private Specification<User> hasName(String name) {
+        return (root, query, criteriaBuilder) ->
+                isBlank(name)
+                        ? criteriaBuilder.conjunction()
+                        : criteriaBuilder.like(
+                        criteriaBuilder.upper(root.get("name")),
+                        "%" + name.trim().toUpperCase() + "%"
+                );
+    }
+
+    private Specification<User> hasEmail(String email) {
+        return (root, query, criteriaBuilder) ->
+                isBlank(email)
+                        ? criteriaBuilder.conjunction()
+                        : criteriaBuilder.like(
+                        criteriaBuilder.upper(root.get("email")),
+                        "%" + email.trim().toUpperCase() + "%"
+                );
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

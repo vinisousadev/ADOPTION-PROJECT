@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface UserService {
     List<UserResponse> getAllUsers();
-    Page<UserResponse> getAllUsers(Pageable pageable);
+    Page<UserResponse> getAllUsers(Pageable pageable, String name, String email);
     UserResponse getById(Long userId);
     UserResponse save(CreateUserRequest request);
     UserResponse update(Long userId, UpdateUserRequest request, String userEmail);

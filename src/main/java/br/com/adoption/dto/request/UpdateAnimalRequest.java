@@ -1,5 +1,6 @@
 package br.com.adoption.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,38 +10,50 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@Schema(description = "Payload for fully updating an animal")
 public class UpdateAnimalRequest {
 
+    @Schema(description = "Display name of the animal", example = "Mel")
     @NotBlank
     @Size(max = 100)
     private String animalName;
 
+    @Schema(description = "Species of the animal", example = "Dog")
     @NotBlank
     @Size(max = 50)
     private String species;
 
+    @Schema(description = "Breed of the animal", example = "Labrador")
     @Size(max = 100)
     private String breed;
 
+    @Schema(description = "Birth date of the animal", example = "2022-01-15")
     private LocalDate birthDate;
 
+    @Schema(description = "Age in years", example = "3")
     @PositiveOrZero
     private Integer age;
 
+    @Schema(description = "Size category of the animal", example = "MEDIUM")
     @Size(max = 20)
     private String animalSize;
 
+    @Schema(description = "Sex of the animal", example = "F", allowableValues = {"M", "F"})
     private Character sex;
 
+    @Schema(description = "Weight in kilograms", example = "12.50")
     @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal weightKg;
 
+    @Schema(description = "Whether the animal is vaccinated", example = "Y", allowableValues = {"Y", "N"})
     @NotNull
     private Character vaccinated;
 
+    @Schema(description = "Whether the animal is neutered", example = "N", allowableValues = {"Y", "N"})
     @NotNull
     private Character neutered;
 
+    @Schema(description = "Additional details about the animal", example = "Very friendly and used to children")
     @Size(max = 500)
     private String description;
 

@@ -1,19 +1,30 @@
 package br.com.adoption.dto.response;
 
 import br.com.adoption.entity.UserType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
+@Schema(description = "User response payload")
 public class UserResponse {
 
+    @Schema(description = "Unique user identifier", example = "1")
     private Long id;
+    @Schema(description = "Full name of the user", example = "Ana Souza")
     private String name;
+    @Schema(description = "CPF of the user", example = "12345678900")
     private String cpf;
+    @Schema(description = "Phone number", example = "83999999999")
     private String phone;
+    @Schema(description = "User email", example = "ana@email.com")
     private String email;
+    @Schema(description = "City where the user lives", example = "Joao Pessoa")
     private String city;
+    @Schema(description = "Brazilian state abbreviation", example = "PB")
     private String state;
+    @Schema(description = "Date and time when the user was registered", example = "2026-04-27T10:15:30")
     private LocalDateTime registrationDate;
+    @Schema(description = "Access profile of the user", example = "COMMON", allowableValues = {"COMMON", "ADMIN"})
     private UserType userType;
 
     public UserResponse() {

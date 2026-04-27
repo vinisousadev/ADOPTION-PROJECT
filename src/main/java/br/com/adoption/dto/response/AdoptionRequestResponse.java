@@ -1,17 +1,26 @@
 package br.com.adoption.dto.response;
 
 import br.com.adoption.entity.AdoptionRequestStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
+@Schema(description = "Adoption request response payload")
 public class AdoptionRequestResponse {
 
+    @Schema(description = "Unique adoption request identifier", example = "1")
     private Long id;
+    @Schema(description = "Optional message sent by the requester", example = "I have a large yard and experience with dogs")
     private String message;
+    @Schema(description = "Current request status", example = "PENDING", allowableValues = {"PENDING", "APPROVED", "REJECTED", "CANCELLED"})
     private AdoptionRequestStatus status;
+    @Schema(description = "Date and time when the request was created", example = "2026-04-27T10:15:30")
     private LocalDateTime requestDate;
+    @Schema(description = "Date and time when the request was answered", example = "2026-04-28T09:00:00")
     private LocalDateTime responseDate;
+    @Schema(description = "Requested animal id", example = "1")
     private Long animalId;
+    @Schema(description = "Requester user id", example = "2")
     private Long userId;
 
     public AdoptionRequestResponse() {

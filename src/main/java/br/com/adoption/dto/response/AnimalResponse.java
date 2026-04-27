@@ -1,27 +1,44 @@
 package br.com.adoption.dto.response;
 
 import br.com.adoption.entity.AnimalStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Schema(description = "Animal response payload")
 public class AnimalResponse {
 
+    @Schema(description = "Unique animal identifier", example = "1")
     private Long id;
+    @Schema(description = "Display name of the animal", example = "Mel")
     private String animalName;
+    @Schema(description = "Species of the animal", example = "Dog")
     private String species;
+    @Schema(description = "Breed of the animal", example = "Labrador")
     private String breed;
+    @Schema(description = "Birth date of the animal", example = "2022-01-15")
     private LocalDate birthDate;
+    @Schema(description = "Age in years", example = "3")
     private Integer age;
+    @Schema(description = "Size category of the animal", example = "MEDIUM")
     private String animalSize;
+    @Schema(description = "Sex of the animal", example = "F", allowableValues = {"M", "F"})
     private Character sex;
+    @Schema(description = "Weight in kilograms", example = "12.50")
     private BigDecimal weightKg;
+    @Schema(description = "Whether the animal is vaccinated", example = "Y", allowableValues = {"Y", "N"})
     private Character vaccinated;
+    @Schema(description = "Whether the animal is neutered", example = "N", allowableValues = {"Y", "N"})
     private Character neutered;
+    @Schema(description = "Additional details about the animal", example = "Very friendly and used to children")
     private String description;
+    @Schema(description = "Current animal status", example = "AVAILABLE", allowableValues = {"AVAILABLE", "ADOPTED", "REMOVED"})
     private AnimalStatus status;
+    @Schema(description = "Date and time when the animal was registered", example = "2026-04-27T10:15:30")
     private LocalDateTime registrationDate;
+    @Schema(description = "Owner user id", example = "1")
     private Long userId;
 
     public AnimalResponse() {
