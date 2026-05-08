@@ -17,9 +17,11 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 
@@ -58,16 +60,18 @@ public class UserController {
     @GetMapping("/{id}")
     @Operation(
             summary = "Get user by id",
-            description = "Returns a specific user by id. Accessible only by admin users"
+            description = "Returns the full user profile for the resource owner/admin and a public profile for other authenticated users"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User returned successfully"),
             @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema())),
-            @ApiResponse(responseCode = "403", description = "Admin access required", content = @Content(schema = @Schema())),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema()))
     })
-    public UserResponse getUserById(@PathVariable Long id) {
-        return userService.getById(id);
+    public UserResponse getUserById(@PathVariable Long id,
+                                    @Parameter(hidden = true)
+                                    Authentication authentication) {
+        String userEmail = authentication != null ? authentication.getName() : null;
+        return userService.getById(id, userEmail);
     }
 
     @PostMapping
@@ -121,6 +125,23 @@ public class UserController {
                                   Authentication authentication) {
         String userEmail = authentication != null ? authentication.getName() : null;
         return userService.patch(id, request, userEmail);
+    }
+
+    @PostMapping(value = "/me/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Upload profile photo",
+            description = "Uploads the authenticated user's profile photo using the backend as the Storage gatekeeper"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Profile photo uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid file", content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema()))
+    })
+    public UserResponse uploadProfilePhoto(@RequestParam("file") MultipartFile file,
+                                           @Parameter(hidden = true)
+                                           Authentication authentication) {
+        String userEmail = authentication != null ? authentication.getName() : null;
+        return userService.uploadProfilePhoto(userEmail, file);
     }
 
     @DeleteMapping("/{id}")

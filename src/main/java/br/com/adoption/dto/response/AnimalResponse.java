@@ -1,11 +1,12 @@
 package br.com.adoption.dto.response;
 
+import br.com.adoption.entity.AgeUnit;
 import br.com.adoption.entity.AnimalStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Schema(description = "Animal response payload")
 public class AnimalResponse {
@@ -20,8 +21,10 @@ public class AnimalResponse {
     private String breed;
     @Schema(description = "Birth date of the animal", example = "2022-01-15")
     private LocalDate birthDate;
-    @Schema(description = "Age in years", example = "3")
-    private Integer age;
+    @Schema(description = "Animal age value", example = "6")
+    private Integer ageValue;
+    @Schema(description = "Animal age unit", example = "MONTHS", allowableValues = {"MONTHS", "YEARS"})
+    private AgeUnit ageUnit;
     @Schema(description = "Size category of the animal", example = "MEDIUM")
     private String animalSize;
     @Schema(description = "Sex of the animal", example = "F", allowableValues = {"M", "F"})
@@ -37,9 +40,15 @@ public class AnimalResponse {
     @Schema(description = "Current animal status", example = "AVAILABLE", allowableValues = {"AVAILABLE", "ADOPTED", "REMOVED"})
     private AnimalStatus status;
     @Schema(description = "Date and time when the animal was registered", example = "2026-04-27T10:15:30")
-    private LocalDateTime registrationDate;
+    private OffsetDateTime registrationDate;
     @Schema(description = "Owner user id", example = "1")
     private Long userId;
+    @Schema(description = "Owner display name", example = "Ana Souza")
+    private String ownerName;
+    @Schema(description = "Owner city", example = "Joao Pessoa")
+    private String ownerCity;
+    @Schema(description = "Owner state", example = "PB")
+    private String ownerState;
 
     public AnimalResponse() {
     }
@@ -84,12 +93,20 @@ public class AnimalResponse {
         this.birthDate = birthDate;
     }
 
-    public Integer getAge() {
-        return age;
+    public Integer getAgeValue() {
+        return ageValue;
     }
 
-    public void setAge(Integer age) {
-        this.age = age;
+    public void setAgeValue(Integer ageValue) {
+        this.ageValue = ageValue;
+    }
+
+    public AgeUnit getAgeUnit() {
+        return ageUnit;
+    }
+
+    public void setAgeUnit(AgeUnit ageUnit) {
+        this.ageUnit = ageUnit;
     }
 
     public String getAnimalSize() {
@@ -148,11 +165,11 @@ public class AnimalResponse {
         this.status = status;
     }
 
-    public LocalDateTime getRegistrationDate() {
+    public OffsetDateTime getRegistrationDate() {
         return registrationDate;
     }
 
-    public void setRegistrationDate(LocalDateTime registrationDate) {
+    public void setRegistrationDate(OffsetDateTime registrationDate) {
         this.registrationDate = registrationDate;
     }
 
@@ -162,5 +179,29 @@ public class AnimalResponse {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public String getOwnerCity() {
+        return ownerCity;
+    }
+
+    public void setOwnerCity(String ownerCity) {
+        this.ownerCity = ownerCity;
+    }
+
+    public String getOwnerState() {
+        return ownerState;
+    }
+
+    public void setOwnerState(String ownerState) {
+        this.ownerState = ownerState;
     }
 }

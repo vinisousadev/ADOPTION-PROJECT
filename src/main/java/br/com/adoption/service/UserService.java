@@ -6,6 +6,7 @@ import br.com.adoption.dto.request.UpdateUserRequest;
 import br.com.adoption.dto.response.UserResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -13,8 +14,10 @@ public interface UserService {
     List<UserResponse> getAllUsers();
     Page<UserResponse> getAllUsers(Pageable pageable, String name, String email);
     UserResponse getById(Long userId);
+    UserResponse getById(Long userId, String userEmail);
     UserResponse save(CreateUserRequest request);
     UserResponse update(Long userId, UpdateUserRequest request, String userEmail);
     UserResponse patch(Long userId, PatchUserRequest request, String userEmail);
+    UserResponse uploadProfilePhoto(String userEmail, MultipartFile file);
     UserResponse delete(Long userId, String userEmail);
 }

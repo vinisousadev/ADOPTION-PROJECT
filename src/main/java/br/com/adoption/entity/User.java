@@ -11,7 +11,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "USERS")
@@ -30,7 +30,7 @@ public class User {
     @Column(name = "NAME", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "CPF", nullable = false, length = 14)
+    @Column(name = "CPF", length = 14)
     private String cpf;
 
     @Column(name = "PHONE", length = 20)
@@ -45,8 +45,26 @@ public class User {
     @Column(name = "STATE", length = 2)
     private String state;
 
+    @Column(name = "PROFILE_PHOTO_URL", length = 500)
+    private String profilePhotoUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ROLE_LABEL", nullable = false, length = 30)
+    private UserRoleLabel roleLabel;
+
     @Column(name = "REGISTRATION_DATE", nullable = false)
-    private LocalDateTime registrationDate;
+    private OffsetDateTime registrationDate;
+
+    @Column(name = "EMAIL_VERIFIED", nullable = false)
+    private boolean emailVerified = true;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "EMAIL_VERIFICATION_TOKEN_HASH", length = 64)
+    private String emailVerificationTokenHash;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "EMAIL_VERIFICATION_EXPIRES_AT")
+    private OffsetDateTime emailVerificationExpiresAt;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "PASSWORD_HASH", nullable = false, length = 255)
@@ -111,12 +129,52 @@ public class User {
         this.state = state;
     }
 
-    public LocalDateTime getRegistrationDate() {
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public UserRoleLabel getRoleLabel() {
+        return roleLabel;
+    }
+
+    public void setRoleLabel(UserRoleLabel roleLabel) {
+        this.roleLabel = roleLabel;
+    }
+
+    public OffsetDateTime getRegistrationDate() {
         return registrationDate;
     }
 
-    public void setRegistrationDate(LocalDateTime registrationDate) {
+    public void setRegistrationDate(OffsetDateTime registrationDate) {
         this.registrationDate = registrationDate;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getEmailVerificationTokenHash() {
+        return emailVerificationTokenHash;
+    }
+
+    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) {
+        this.emailVerificationTokenHash = emailVerificationTokenHash;
+    }
+
+    public OffsetDateTime getEmailVerificationExpiresAt() {
+        return emailVerificationExpiresAt;
+    }
+
+    public void setEmailVerificationExpiresAt(OffsetDateTime emailVerificationExpiresAt) {
+        this.emailVerificationExpiresAt = emailVerificationExpiresAt;
     }
 
     public String getPasswordHash() {

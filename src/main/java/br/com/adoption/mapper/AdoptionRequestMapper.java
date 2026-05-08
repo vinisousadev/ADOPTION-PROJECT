@@ -24,10 +24,19 @@ public class AdoptionRequestMapper {
 
         if (adoptionRequest.getAnimal() != null) {
             response.setAnimalId(adoptionRequest.getAnimal().getId());
+            response.setAnimalName(adoptionRequest.getAnimal().getAnimalName());
+
+            if (adoptionRequest.getAnimal().getUser() != null) {
+                response.setOwnerId(adoptionRequest.getAnimal().getUser().getId());
+                response.setOwnerName(adoptionRequest.getAnimal().getUser().getName());
+                response.setOwnerCity(adoptionRequest.getAnimal().getUser().getCity());
+                response.setOwnerState(adoptionRequest.getAnimal().getUser().getState());
+            }
         }
 
         if (adoptionRequest.getUser() != null) {
             response.setUserId(adoptionRequest.getUser().getId());
+            response.setRequesterName(adoptionRequest.getUser().getName());
         }
 
         return response;

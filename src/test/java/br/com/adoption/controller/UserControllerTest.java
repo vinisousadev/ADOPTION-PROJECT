@@ -20,7 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -103,14 +104,16 @@ class UserControllerTest {
         user.setEmail("joao@email.com");
         user.setUserType(UserType.COMMON);
 
-        when(userService.getById(1L)).thenReturn(user);
+        when(userService.getById(eq(1L), any())).thenReturn(user);
 
-        mockMvc.perform(get("/users/1"))
+        mockMvc.perform(get("/users/1").with(user("joao@email.com")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Joao"))
                 .andExpect(jsonPath("$.email").value("joao@email.com"))
                 .andExpect(jsonPath("$.userType").value("COMMON"));
+
+        verify(userService).getById(eq(1L), any());
     }
 
     @Test
@@ -122,7 +125,7 @@ class UserControllerTest {
         savedUser.setEmail("carlos@email.com");
         savedUser.setCity("Joao Pessoa");
         savedUser.setState("PB");
-        savedUser.setRegistrationDate(LocalDateTime.now());
+        savedUser.setRegistrationDate(OffsetDateTime.now());
         savedUser.setUserType(UserType.COMMON);
 
         when(userService.save(any(CreateUserRequest.class))).thenReturn(savedUser);
@@ -203,6 +206,26 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Carlos patch"));
+    }
+
+    @Test
+    void shouldUploadProfilePhoto() throws Exception {
+        UserResponse updatedUser = new UserResponse();
+        updatedUser.setId(1L);
+        updatedUser.setName("Carlos");
+        updatedUser.setProfilePhotoUrl("https://example.com/profile.jpg");
+
+        when(userService.uploadProfilePhoto(any(), any()))
+                .thenReturn(updatedUser);
+
+        mockMvc.perform(multipart("/users/me/profile-photo")
+                        .file("file", "image-content".getBytes())
+                        .with(user("owner@email.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.profilePhotoUrl").value("https://example.com/profile.jpg"));
+
+        verify(userService).uploadProfilePhoto(any(), any());
     }
 
     @Test

@@ -54,6 +54,60 @@ public class AdoptionRequestController {
         return new PagedModel<>(adoptionRequestService.getAllRequests(pageable, status, animalId, userId));
     }
 
+    @GetMapping("/mine")
+    @Operation(
+            summary = "List authenticated user adoption requests",
+            description = "Returns paginated adoption requests created by the authenticated user"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Requests returned successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema()))
+    })
+    public PagedModel<AdoptionRequestResponse> getMyRequests(
+            @Parameter(hidden = true)
+            Authentication authentication,
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(adoptionRequestService.getMyRequests(pageable, authentication.getName()));
+    }
+
+    @GetMapping("/received")
+    @Operation(
+            summary = "List adoption requests received for authenticated user animals",
+            description = "Returns paginated adoption requests for animals owned by the authenticated user"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Requests returned successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema()))
+    })
+    public PagedModel<AdoptionRequestResponse> getReceivedRequests(
+            @Parameter(hidden = true)
+            Authentication authentication,
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return new PagedModel<>(adoptionRequestService.getReceivedRequests(pageable, authentication.getName()));
+    }
+
+    @GetMapping("/adoption-history")
+    @Operation(
+            summary = "List authenticated user adoption history",
+            description = "Returns approved adoption requests for animals owned by the authenticated user"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Adoption history returned successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema()))
+    })
+    public PagedModel<AdoptionRequestResponse> getMyAdoptionHistory(
+            @Parameter(hidden = true)
+            Authentication authentication,
+            @ParameterObject
+            @PageableDefault(size = 20) Pageable pageable) {
+        return new PagedModel<>(adoptionRequestService.getMyAdoptionHistory(pageable, authentication.getName()));
+    }
+
     @GetMapping("/{id}")
     @Operation(
             summary = "Get adoption request by id",

@@ -15,6 +15,7 @@ import br.com.adoption.exception.OwnerCannotAdoptOwnAnimalException;
 import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
+import br.com.adoption.service.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +46,9 @@ class AdoptionRequestServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private AdoptionRequestServiceImpl adoptionRequestService;

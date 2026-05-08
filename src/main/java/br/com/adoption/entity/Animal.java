@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "ANIMAL")
@@ -42,8 +42,12 @@ public class Animal {
     @Column(name = "BIRTH_DATE")
     private LocalDate birthDate;
 
-    @Column(name = "AGE")
-    private Integer age;
+    @Column(name = "AGE_VALUE")
+    private Integer ageValue;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "AGE_UNIT", length = 20)
+    private AgeUnit ageUnit;
 
     @Column(name = "ANIMAL_SIZE", length = 20)
     private String animalSize;
@@ -68,7 +72,7 @@ public class Animal {
     private AnimalStatus status;
 
     @Column(name = "REGISTRATION_DATE", nullable = false)
-    private LocalDateTime registrationDate;
+    private OffsetDateTime registrationDate;
 
     @ManyToOne
     @JoinColumn(name = "FK_USERS_ID_USER")
@@ -113,12 +117,20 @@ public class Animal {
         this.birthDate = birthDate;
     }
 
-    public Integer getAge() {
-        return age;
+    public Integer getAgeValue() {
+        return ageValue;
     }
 
-    public void setAge(Integer age) {
-        this.age = age;
+    public void setAgeValue(Integer ageValue) {
+        this.ageValue = ageValue;
+    }
+
+    public AgeUnit getAgeUnit() {
+        return ageUnit;
+    }
+
+    public void setAgeUnit(AgeUnit ageUnit) {
+        this.ageUnit = ageUnit;
     }
 
     public String getAnimalSize() {
@@ -177,11 +189,11 @@ public class Animal {
         this.status = status;
     }
 
-    public LocalDateTime getRegistrationDate() {
+    public OffsetDateTime getRegistrationDate() {
         return registrationDate;
     }
 
-    public void setRegistrationDate(LocalDateTime registrationDate) {
+    public void setRegistrationDate(OffsetDateTime registrationDate) {
         this.registrationDate = registrationDate;
     }
 

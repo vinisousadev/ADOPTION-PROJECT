@@ -1,5 +1,6 @@
 package br.com.adoption.dto.request;
 
+import br.com.adoption.entity.UserRoleLabel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,7 +15,6 @@ public class UpdateUserRequest {
     private String name;
 
     @Schema(description = "CPF of the user", example = "12345678900")
-    @NotBlank
     @Size(min = 11, max = 14)
     private String cpf;
 
@@ -35,6 +35,13 @@ public class UpdateUserRequest {
     @Schema(description = "Brazilian state abbreviation", example = "PB")
     @Size(min = 2, max = 2)
     private String state;
+
+    @Schema(description = "Public URL of the user profile photo", example = "https://example.com/profile.jpg")
+    @Size(max = 500)
+    private String profilePhotoUrl;
+
+    @Schema(description = "Public role label displayed in profile and feed", example = "PROTETOR", allowableValues = {"ONG", "PROTETOR"})
+    private UserRoleLabel roleLabel;
 
     @Schema(description = "Plain password sent for account update", example = "novaSenha123")
     @NotBlank
@@ -90,6 +97,22 @@ public class UpdateUserRequest {
 
     public void setState(String state) {
         this.state = state;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public UserRoleLabel getRoleLabel() {
+        return roleLabel;
+    }
+
+    public void setRoleLabel(UserRoleLabel roleLabel) {
+        this.roleLabel = roleLabel;
     }
 
     public String getPasswordHash() {

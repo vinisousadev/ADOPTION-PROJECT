@@ -9,6 +9,8 @@ import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.OnlyOwnerCanManageUserException;
 import br.com.adoption.exception.ResourceNotFoundException;
 import br.com.adoption.repository.UserRepository;
+import br.com.adoption.service.EmailVerificationService;
+import br.com.adoption.service.SupabaseStorageService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,8 +23,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.mock.web.MockMultipartFile;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +40,12 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private SupabaseStorageService supabaseStorageService;
+
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -127,7 +136,9 @@ class UserServiceImplTest {
         request.setState("PB");
         request.setPasswordHash("123456");
 
+        when(userRepository.findByEmail("carlos@email.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("123456")).thenReturn("encoded-password");
+        when(emailVerificationService.prepareEmailVerification(any(User.class))).thenReturn("confirmation-token");
 
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -150,6 +161,7 @@ class UserServiceImplTest {
         assertNotNull(capturedUser.getRegistrationDate());
 
         verify(passwordEncoder, times(1)).encode("123456");
+        verify(emailVerificationService).sendEmailVerification(any(User.class), eq("confirmation-token"));
     }
 
     @Test
@@ -207,6 +219,58 @@ class UserServiceImplTest {
 
         verify(targetUser).setCity("Recife");
         verify(userRepository).save(targetUser);
+    }
+
+    @Test
+    void shouldReturnPublicUserByIdWhenAuthenticatedUserIsNotOwnerNorAdmin() {
+        User targetUser = mock(User.class);
+        when(targetUser.getId()).thenReturn(1L);
+        when(targetUser.getName()).thenReturn("Joao");
+        when(targetUser.getPhone()).thenReturn("83999999999");
+        when(targetUser.getEmail()).thenReturn("joao@email.com");
+        when(targetUser.getCity()).thenReturn("Joao Pessoa");
+        when(targetUser.getState()).thenReturn("PB");
+        when(targetUser.getUserType()).thenReturn(UserType.COMMON);
+
+        User authenticatedUser = mock(User.class);
+        when(authenticatedUser.getId()).thenReturn(2L);
+        when(authenticatedUser.getUserType()).thenReturn(UserType.COMMON);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(targetUser));
+        when(userRepository.findByEmail("other@email.com")).thenReturn(Optional.of(authenticatedUser));
+
+        UserResponse result = userService.getById(1L, "other@email.com");
+
+        assertEquals(1L, result.getId());
+        assertEquals("Joao", result.getName());
+        assertEquals("83999999999", result.getPhone());
+        assertEquals("joao@email.com", result.getEmail());
+        assertEquals("Joao Pessoa", result.getCity());
+        assertEquals("PB", result.getState());
+        assertNull(result.getCpf());
+    }
+
+    @Test
+    void shouldUploadProfilePhotoForAuthenticatedUser() {
+        User authenticatedUser = mock(User.class);
+        when(authenticatedUser.getId()).thenReturn(1L);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "profile.jpg",
+                "image/jpeg",
+                "image-content".getBytes()
+        );
+
+        when(userRepository.findByEmail("owner@email.com")).thenReturn(Optional.of(authenticatedUser));
+        when(supabaseStorageService.uploadUserProfilePhoto(eq(1L), any(), eq("image/jpeg"), eq("jpg")))
+                .thenReturn("https://example.com/profile.jpg");
+        when(userRepository.save(authenticatedUser)).thenReturn(authenticatedUser);
+
+        userService.uploadProfilePhoto("owner@email.com", file);
+
+        verify(authenticatedUser).setProfilePhotoUrl("https://example.com/profile.jpg");
+        verify(userRepository).save(authenticatedUser);
     }
 
     @Test

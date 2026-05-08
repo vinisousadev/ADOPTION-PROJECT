@@ -17,9 +17,11 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @SecurityRequirement(name = "bearerAuth")
@@ -81,6 +83,20 @@ public class AnimalPhotoController {
                                            Authentication authentication) {
         String userEmail = authentication != null ? authentication.getName() : null;
         return animalPhotoService.save(request, userEmail);
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Upload animal photo",
+            description = "Uploads an animal photo through the backend. Allowed for the animal owner or admin"
+    )
+    public AnimalPhotoResponse uploadPhoto(@RequestParam Long animalId,
+                                           @RequestParam(defaultValue = "N") Character isMain,
+                                           @RequestParam("file") MultipartFile file,
+                                           @Parameter(hidden = true)
+                                           Authentication authentication) {
+        String userEmail = authentication != null ? authentication.getName() : null;
+        return animalPhotoService.upload(animalId, isMain, file, userEmail);
     }
 
     @PutMapping("/{id}")

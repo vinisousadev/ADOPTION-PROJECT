@@ -6,6 +6,7 @@ import br.com.adoption.entity.User;
 import br.com.adoption.entity.UserType;
 import br.com.adoption.exception.InvalidCredentialsException;
 import br.com.adoption.repository.UserRepository;
+import br.com.adoption.service.EmailVerificationService;
 import br.com.adoption.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,9 @@ class AuthServiceImplTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private EmailVerificationService emailVerificationService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -46,6 +50,7 @@ class AuthServiceImplTest {
         when(user.getEmail()).thenReturn("carlos@email.com");
         when(user.getUserType()).thenReturn(UserType.COMMON);
         when(user.getPasswordHash()).thenReturn("encoded-password");
+        when(user.isEmailVerified()).thenReturn(true);
 
         when(userRepository.findByEmail("carlos@email.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("123456", "encoded-password")).thenReturn(true);

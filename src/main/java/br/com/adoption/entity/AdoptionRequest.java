@@ -12,7 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "ADOPTION_REQUEST")
@@ -36,10 +36,10 @@ public class AdoptionRequest {
     private AdoptionRequestStatus status;
 
     @Column(name = "REQUEST_DATE", nullable = false)
-    private LocalDateTime requestDate;
+    private OffsetDateTime requestDate;
 
     @Column(name = "RESPONSE_DATE")
-    private LocalDateTime responseDate;
+    private OffsetDateTime responseDate;
 
     @ManyToOne
     @JoinColumn(name = "FK_ANIMAL_ID_ANIMAL", nullable = false)
@@ -72,19 +72,19 @@ public class AdoptionRequest {
         this.status = status;
     }
 
-    public LocalDateTime getRequestDate() {
+    public OffsetDateTime getRequestDate() {
         return requestDate;
     }
 
-    public void setRequestDate(LocalDateTime requestDate) {
+    public void setRequestDate(OffsetDateTime requestDate) {
         this.requestDate = requestDate;
     }
 
-    public LocalDateTime getResponseDate() {
+    public OffsetDateTime getResponseDate() {
         return responseDate;
     }
 
-    public void setResponseDate(LocalDateTime responseDate) {
+    public void setResponseDate(OffsetDateTime responseDate) {
         this.responseDate = responseDate;
     }
 

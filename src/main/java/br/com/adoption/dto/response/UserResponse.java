@@ -1,9 +1,10 @@
 package br.com.adoption.dto.response;
 
 import br.com.adoption.entity.UserType;
+import br.com.adoption.entity.UserRoleLabel;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Schema(description = "User response payload")
 public class UserResponse {
@@ -22,10 +23,16 @@ public class UserResponse {
     private String city;
     @Schema(description = "Brazilian state abbreviation", example = "PB")
     private String state;
+    @Schema(description = "Public URL of the user profile photo", example = "https://example.com/profile.jpg")
+    private String profilePhotoUrl;
+    @Schema(description = "Public role label displayed in profile and feed", example = "PROTETOR", allowableValues = {"ONG", "PROTETOR"})
+    private UserRoleLabel roleLabel;
     @Schema(description = "Date and time when the user was registered", example = "2026-04-27T10:15:30")
-    private LocalDateTime registrationDate;
+    private OffsetDateTime registrationDate;
     @Schema(description = "Access profile of the user", example = "COMMON", allowableValues = {"COMMON", "ADMIN"})
     private UserType userType;
+    @Schema(description = "Whether the user email has been confirmed", example = "true")
+    private boolean emailVerified;
 
     public UserResponse() {
     }
@@ -86,11 +93,27 @@ public class UserResponse {
         this.state = state;
     }
 
-    public LocalDateTime getRegistrationDate() {
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public UserRoleLabel getRoleLabel() {
+        return roleLabel;
+    }
+
+    public void setRoleLabel(UserRoleLabel roleLabel) {
+        this.roleLabel = roleLabel;
+    }
+
+    public OffsetDateTime getRegistrationDate() {
         return registrationDate;
     }
 
-    public void setRegistrationDate(LocalDateTime registrationDate) {
+    public void setRegistrationDate(OffsetDateTime registrationDate) {
         this.registrationDate = registrationDate;
     }
 
@@ -100,5 +123,13 @@ public class UserResponse {
 
     public void setUserType(UserType userType) {
         this.userType = userType;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 }

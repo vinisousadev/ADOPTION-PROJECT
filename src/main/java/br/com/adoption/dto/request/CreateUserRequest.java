@@ -1,5 +1,6 @@
 package br.com.adoption.dto.request;
 
+import br.com.adoption.entity.UserRoleLabel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,7 +15,6 @@ public class CreateUserRequest {
     private String name;
 
     @Schema(description = "CPF of the user", example = "12345678900")
-    @NotBlank
     @Size(min = 11, max = 14)
     private String cpf;
 
@@ -40,6 +40,9 @@ public class CreateUserRequest {
     @NotBlank
     @Size(max = 255)
     private String passwordHash;
+
+    @Schema(description = "Public role label displayed in profile and feed", example = "PROTETOR", allowableValues = {"ONG", "PROTETOR"})
+    private UserRoleLabel roleLabel;
 
     public CreateUserRequest() {
     }
@@ -98,5 +101,13 @@ public class CreateUserRequest {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public UserRoleLabel getRoleLabel() {
+        return roleLabel;
+    }
+
+    public void setRoleLabel(UserRoleLabel roleLabel) {
+        this.roleLabel = roleLabel;
     }
 }

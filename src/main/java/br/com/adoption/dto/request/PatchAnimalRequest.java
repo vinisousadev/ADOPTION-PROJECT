@@ -1,6 +1,8 @@
 package br.com.adoption.dto.request;
 
+import br.com.adoption.entity.AgeUnit;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -26,9 +28,12 @@ public class PatchAnimalRequest {
     @Schema(description = "Birth date of the animal", example = "2022-01-15")
     private LocalDate birthDate;
 
-    @Schema(description = "Age in years", example = "3")
+    @Schema(description = "Animal age value", example = "6")
     @PositiveOrZero
-    private Integer age;
+    private Integer ageValue;
+
+    @Schema(description = "Animal age unit", example = "MONTHS", allowableValues = {"MONTHS", "YEARS"})
+    private AgeUnit ageUnit;
 
     @Schema(description = "Size category of the animal", example = "MEDIUM")
     @Size(max = 20)
@@ -86,12 +91,20 @@ public class PatchAnimalRequest {
         this.birthDate = birthDate;
     }
 
-    public Integer getAge() {
-        return age;
+    public Integer getAgeValue() {
+        return ageValue;
     }
 
-    public void setAge(Integer age) {
-        this.age = age;
+    public void setAgeValue(Integer ageValue) {
+        this.ageValue = ageValue;
+    }
+
+    public AgeUnit getAgeUnit() {
+        return ageUnit;
+    }
+
+    public void setAgeUnit(AgeUnit ageUnit) {
+        this.ageUnit = ageUnit;
     }
 
     public String getAnimalSize() {
@@ -140,5 +153,10 @@ public class PatchAnimalRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @AssertTrue(message = "ageValue and ageUnit must be provided together")
+    public boolean isAgeComplete() {
+        return (ageValue == null && ageUnit == null) || (ageValue != null && ageUnit != null);
     }
 }

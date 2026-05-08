@@ -4,6 +4,7 @@ import br.com.adoption.dto.request.CreateAnimalRequest;
 import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
+import br.com.adoption.entity.AgeUnit;
 import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.exception.GlobalExceptionHandler;
 import br.com.adoption.exception.OnlyOwnerCanManageAnimalException;
@@ -31,7 +32,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -186,7 +187,8 @@ class AnimalControllerTest {
         savedAnimal.setSpecies("Dog");
         savedAnimal.setBreed("Labrador");
         savedAnimal.setBirthDate(LocalDate.of(2024, 1, 10));
-        savedAnimal.setAge(1);
+        savedAnimal.setAgeValue(1);
+        savedAnimal.setAgeUnit(AgeUnit.YEARS);
         savedAnimal.setAnimalSize("MEDIUM");
         savedAnimal.setSex('M');
         savedAnimal.setWeightKg(new BigDecimal("12.50"));
@@ -194,7 +196,7 @@ class AnimalControllerTest {
         savedAnimal.setNeutered('N');
         savedAnimal.setDescription("Very friendly");
         savedAnimal.setStatus(AnimalStatus.AVAILABLE);
-        savedAnimal.setRegistrationDate(LocalDateTime.now());
+        savedAnimal.setRegistrationDate(OffsetDateTime.now());
         savedAnimal.setUserId(1L);
 
         when(animalService.save(any(CreateAnimalRequest.class), anyString())).thenReturn(savedAnimal);
@@ -205,7 +207,8 @@ class AnimalControllerTest {
                   "species": "Dog",
                   "breed": "Labrador",
                   "birthDate": "2024-01-10",
-                  "age": 1,
+                  "ageValue": 1,
+                  "ageUnit": "YEARS",
                   "animalSize": "MEDIUM",
                   "sex": "M",
                   "weightKg": 12.50,
@@ -243,7 +246,8 @@ class AnimalControllerTest {
                   "species": "Dog",
                   "breed": "Labrador",
                   "birthDate": "2024-01-10",
-                  "age": 2,
+                  "ageValue": 2,
+                  "ageUnit": "YEARS",
                   "animalSize": "MEDIUM",
                   "sex": "M",
                   "weightKg": 14.50,
@@ -374,7 +378,8 @@ class AnimalControllerTest {
             {
               "animalName": "",
               "species": "",
-              "age": -1,
+              "ageValue": -1,
+              "ageUnit": "YEARS",
               "weightKg": 0,
               "vaccinated": null,
               "neutered": null,
@@ -390,7 +395,7 @@ class AnimalControllerTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.fields.animalName").exists())
                 .andExpect(jsonPath("$.fields.species").exists())
-                .andExpect(jsonPath("$.fields.age").exists())
+                .andExpect(jsonPath("$.fields.ageValue").exists())
                 .andExpect(jsonPath("$.fields.weightKg").exists())
                 .andExpect(jsonPath("$.fields.vaccinated").exists())
                 .andExpect(jsonPath("$.fields.neutered").exists());

@@ -6,6 +6,7 @@ import br.com.adoption.dto.request.UpdateAnimalPhotoRequest;
 import br.com.adoption.dto.response.AnimalPhotoResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ public interface AnimalPhotoService {
     Page<AnimalPhotoResponse> getAllPhotos(Pageable pageable);
     Page<AnimalPhotoResponse> getAllPhotos(Long animalId, Pageable pageable);
     AnimalPhotoResponse getById(Long photoId);
+    AnimalPhotoResponse upload(Long animalId, Character isMain, MultipartFile file, String userEmail);
     AnimalPhotoResponse save(CreateAnimalPhotoRequest request, String userEmail);
     AnimalPhotoResponse update(Long photoId, UpdateAnimalPhotoRequest request, String userEmail);
     AnimalPhotoResponse patch(Long photoId, PatchAnimalPhotoRequest request, String userEmail);

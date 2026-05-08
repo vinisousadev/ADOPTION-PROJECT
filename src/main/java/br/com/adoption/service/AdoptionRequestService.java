@@ -14,6 +14,9 @@ public interface AdoptionRequestService {
                                                  AdoptionRequestStatus status,
                                                  Long animalId,
                                                  Long userId);
+    Page<AdoptionRequestResponse> getMyRequests(Pageable pageable, String userEmail);
+    Page<AdoptionRequestResponse> getReceivedRequests(Pageable pageable, String userEmail);
+    Page<AdoptionRequestResponse> getMyAdoptionHistory(Pageable pageable, String userEmail);
     AdoptionRequestResponse getById(Long requestId, String userEmail);
     AdoptionRequestResponse save(CreateAdoptionRequest request, String userEmail);
     AdoptionRequestResponse approveRequest(Long requestId, String userEmail);

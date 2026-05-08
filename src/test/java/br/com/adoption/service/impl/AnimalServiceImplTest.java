@@ -4,6 +4,7 @@ import br.com.adoption.dto.request.CreateAnimalRequest;
 import br.com.adoption.dto.request.PatchAnimalRequest;
 import br.com.adoption.dto.request.UpdateAnimalRequest;
 import br.com.adoption.dto.response.AnimalResponse;
+import br.com.adoption.entity.AgeUnit;
 import br.com.adoption.entity.Animal;
 import br.com.adoption.entity.AnimalStatus;
 import br.com.adoption.entity.User;
@@ -27,7 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -192,7 +193,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -218,7 +219,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setStatus(AnimalStatus.ADOPTED);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -263,7 +264,8 @@ class AnimalServiceImplTest {
         request.setSpecies("Dog");
         request.setBreed("Labrador");
         request.setBirthDate(LocalDate.of(2024, 1, 10));
-        request.setAge(1);
+        request.setAgeValue(1);
+        request.setAgeUnit(AgeUnit.YEARS);
         request.setAnimalSize("MEDIUM");
         request.setSex('M');
         request.setWeightKg(new BigDecimal("12.50"));
@@ -321,7 +323,8 @@ class AnimalServiceImplTest {
         request.setSpecies("Dog");
         request.setBreed("Labrador");
         request.setBirthDate(LocalDate.of(2024, 1, 10));
-        request.setAge(2);
+        request.setAgeValue(2);
+        request.setAgeUnit(AgeUnit.YEARS);
         request.setAnimalSize("MEDIUM");
         request.setSex('M');
         request.setWeightKg(new BigDecimal("14.50"));
@@ -337,7 +340,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -350,7 +353,8 @@ class AnimalServiceImplTest {
         assertEquals("Rex atualizado", result.getAnimalName());
         assertEquals("Dog", result.getSpecies());
         assertEquals("Labrador", result.getBreed());
-        assertEquals(2, result.getAge());
+        assertEquals(2, result.getAgeValue());
+        assertEquals(AgeUnit.YEARS, result.getAgeUnit());
         assertEquals(AnimalStatus.AVAILABLE, result.getStatus());
         assertEquals(1L, result.getUserId());
 
@@ -375,7 +379,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Mia");
         animal.setSpecies("Cat");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -405,7 +409,7 @@ class AnimalServiceImplTest {
         animal.setSpecies("Dog");
         animal.setDescription("Old");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -461,7 +465,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));
@@ -490,7 +494,7 @@ class AnimalServiceImplTest {
         animal.setAnimalName("Rex");
         animal.setSpecies("Dog");
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
         animal.setUser(owner);
 
         when(animalRepository.findById(10L)).thenReturn(Optional.of(animal));

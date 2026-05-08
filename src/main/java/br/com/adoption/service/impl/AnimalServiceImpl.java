@@ -21,7 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -122,7 +122,7 @@ public class AnimalServiceImpl implements AnimalService {
         Animal animal = AnimalMapper.toEntity(request);
         animal.setUser(user);
         animal.setStatus(AnimalStatus.AVAILABLE);
-        animal.setRegistrationDate(LocalDateTime.now());
+        animal.setRegistrationDate(OffsetDateTime.now());
 
         Animal savedAnimal = animalRepository.save(animal);
         return AnimalMapper.toResponse(savedAnimal);
@@ -142,7 +142,8 @@ public class AnimalServiceImpl implements AnimalService {
         animal.setSpecies(request.getSpecies());
         animal.setBreed(request.getBreed());
         animal.setBirthDate(request.getBirthDate());
-        animal.setAge(request.getAge());
+        animal.setAgeValue(request.getAgeValue());
+        animal.setAgeUnit(request.getAgeUnit());
         animal.setAnimalSize(request.getAnimalSize());
         animal.setSex(request.getSex());
         animal.setWeightKg(request.getWeightKg());
@@ -176,8 +177,11 @@ public class AnimalServiceImpl implements AnimalService {
         if (request.getBirthDate() != null) {
             animal.setBirthDate(request.getBirthDate());
         }
-        if (request.getAge() != null) {
-            animal.setAge(request.getAge());
+        if (request.getAgeValue() != null) {
+            animal.setAgeValue(request.getAgeValue());
+        }
+        if (request.getAgeUnit() != null) {
+            animal.setAgeUnit(request.getAgeUnit());
         }
         if (request.getAnimalSize() != null) {
             animal.setAnimalSize(request.getAnimalSize());

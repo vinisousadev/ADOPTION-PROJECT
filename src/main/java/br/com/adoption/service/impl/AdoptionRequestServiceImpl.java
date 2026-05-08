@@ -19,6 +19,7 @@ import br.com.adoption.repository.AdoptionRequestRepository;
 import br.com.adoption.repository.AnimalRepository;
 import br.com.adoption.repository.UserRepository;
 import br.com.adoption.service.AdoptionRequestService;
+import br.com.adoption.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,7 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -35,13 +36,16 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     private final AdoptionRequestRepository adoptionRequestRepository;
     private final AnimalRepository animalRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public AdoptionRequestServiceImpl(AdoptionRequestRepository adoptionRequestRepository,
                                       AnimalRepository animalRepository,
-                                      UserRepository userRepository) {
+                                      UserRepository userRepository,
+                                      NotificationService notificationService) {
         this.adoptionRequestRepository = adoptionRequestRepository;
         this.animalRepository = animalRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -58,6 +62,38 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
                 buildRequestFilterSpecification(status, animalId, userId),
                 pageable
         ).map(AdoptionRequestMapper::toResponse);
+    }
+
+    @Override
+    public Page<AdoptionRequestResponse> getMyRequests(Pageable pageable, String userEmail) {
+        userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return adoptionRequestRepository.findByUser_Email(userEmail, pageable)
+                .map(AdoptionRequestMapper::toResponse);
+    }
+
+    @Override
+    public Page<AdoptionRequestResponse> getReceivedRequests(Pageable pageable, String userEmail) {
+        userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return adoptionRequestRepository.findByAnimal_User_Email(userEmail, pageable)
+                .map(AdoptionRequestMapper::toResponse);
+    }
+
+    @Override
+    public Page<AdoptionRequestResponse> getMyAdoptionHistory(Pageable pageable, String userEmail) {
+        userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return adoptionRequestRepository
+                .findByAnimal_User_EmailAndStatusOrderByResponseDateDesc(
+                        userEmail,
+                        AdoptionRequestStatus.APPROVED,
+                        pageable
+                )
+                .map(AdoptionRequestMapper::toResponse);
     }
 
     @Override
@@ -111,9 +147,18 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         adoptionRequest.setAnimal(animal);
         adoptionRequest.setUser(user);
         adoptionRequest.setStatus(AdoptionRequestStatus.PENDING);
-        adoptionRequest.setRequestDate(LocalDateTime.now());
+        adoptionRequest.setRequestDate(OffsetDateTime.now());
 
         AdoptionRequest savedRequest = adoptionRequestRepository.save(adoptionRequest);
+        notificationService.notify(
+                animal.getUser(),
+                "Nova solicitacao de adocao",
+                user.getName() + " quer adotar " + animal.getAnimalName() + ".",
+                "ADOPTION_REQUEST_CREATED",
+                "ADOPTION_REQUEST",
+                savedRequest.getId(),
+                "/received-adoption-requests"
+        );
         return AdoptionRequestMapper.toResponse(savedRequest);
     }
 
@@ -137,7 +182,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             throw new AdoptionRequestNotPendingException("Only pending requests can be approved");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
 
         request.setStatus(AdoptionRequestStatus.APPROVED);
         request.setResponseDate(now);
@@ -147,6 +192,15 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
 
         animalRepository.save(animal);
         AdoptionRequest approvedRequest = adoptionRequestRepository.save(request);
+        notificationService.notify(
+                request.getUser(),
+                "Solicitacao aprovada",
+                "Sua solicitacao para adotar " + animal.getAnimalName() + " foi aprovada.",
+                "ADOPTION_REQUEST_APPROVED",
+                "ADOPTION_REQUEST",
+                approvedRequest.getId(),
+                "/my-adoption-requests"
+        );
 
         List<AdoptionRequest> pendingRequests =
                 adoptionRequestRepository.findByAnimal_IdAndStatus(animal.getId(), AdoptionRequestStatus.PENDING);
@@ -155,7 +209,16 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             if (!pendingRequest.getId().equals(request.getId())) {
                 pendingRequest.setStatus(AdoptionRequestStatus.REJECTED);
                 pendingRequest.setResponseDate(now);
-                adoptionRequestRepository.save(pendingRequest);
+                AdoptionRequest autoRejectedRequest = adoptionRequestRepository.save(pendingRequest);
+                notificationService.notify(
+                        pendingRequest.getUser(),
+                        "Solicitacao encerrada",
+                        animal.getAnimalName() + " ja encontrou uma familia.",
+                        "ADOPTION_REQUEST_REJECTED",
+                        "ADOPTION_REQUEST",
+                        autoRejectedRequest.getId(),
+                        "/my-adoption-requests"
+                );
             }
         }
 
@@ -182,9 +245,18 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         }
 
         request.setStatus(AdoptionRequestStatus.REJECTED);
-        request.setResponseDate(LocalDateTime.now());
+        request.setResponseDate(OffsetDateTime.now());
 
         AdoptionRequest rejectedRequest = adoptionRequestRepository.save(request);
+        notificationService.notify(
+                request.getUser(),
+                "Solicitacao rejeitada",
+                "Sua solicitacao para adotar " + request.getAnimal().getAnimalName() + " foi rejeitada.",
+                "ADOPTION_REQUEST_REJECTED",
+                "ADOPTION_REQUEST",
+                rejectedRequest.getId(),
+                "/my-adoption-requests"
+        );
         return AdoptionRequestMapper.toResponse(rejectedRequest);
     }
 
@@ -210,7 +282,7 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         }
 
         request.setStatus(AdoptionRequestStatus.CANCELLED);
-        request.setResponseDate(LocalDateTime.now());
+        request.setResponseDate(OffsetDateTime.now());
 
         AdoptionRequest cancelledRequest = adoptionRequestRepository.save(request);
         return AdoptionRequestMapper.toResponse(cancelledRequest);

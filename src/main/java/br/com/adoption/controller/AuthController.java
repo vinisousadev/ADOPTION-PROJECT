@@ -1,6 +1,9 @@
 package br.com.adoption.controller;
 
+import br.com.adoption.dto.request.ConfirmEmailRequest;
 import br.com.adoption.dto.request.LoginRequest;
+import br.com.adoption.dto.request.ResendEmailConfirmationRequest;
+import br.com.adoption.dto.response.EmailConfirmationResponse;
 import br.com.adoption.dto.response.LoginResponse;
 import br.com.adoption.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,5 +46,24 @@ public class AuthController {
     })
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/confirm-email")
+    @Operation(
+            summary = "Confirm user email",
+            description = "Validates an email confirmation token and releases the user account for login"
+    )
+    public EmailConfirmationResponse confirmEmail(@Valid @RequestBody ConfirmEmailRequest request) {
+        return authService.confirmEmail(request.getToken());
+    }
+
+    @PostMapping("/resend-confirmation")
+    @Operation(
+            summary = "Resend confirmation email",
+            description = "Sends a new confirmation email for an unverified user"
+    )
+    public EmailConfirmationResponse resendEmailConfirmation(
+            @Valid @RequestBody ResendEmailConfirmationRequest request) {
+        return authService.resendEmailConfirmation(request.getEmail());
     }
 }

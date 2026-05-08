@@ -14,7 +14,8 @@ public class AnimalMapper {
         animal.setSpecies(request.getSpecies());
         animal.setBreed(request.getBreed());
         animal.setBirthDate(request.getBirthDate());
-        animal.setAge(request.getAge());
+        animal.setAgeValue(request.getAgeValue());
+        animal.setAgeUnit(request.getAgeUnit());
         animal.setAnimalSize(request.getAnimalSize());
         animal.setSex(request.getSex());
         animal.setWeightKg(request.getWeightKg());
@@ -31,7 +32,8 @@ public class AnimalMapper {
         response.setSpecies(animal.getSpecies());
         response.setBreed(animal.getBreed());
         response.setBirthDate(animal.getBirthDate());
-        response.setAge(animal.getAge());
+        response.setAgeValue(animal.getAgeValue());
+        response.setAgeUnit(animal.getAgeUnit());
         response.setAnimalSize(animal.getAnimalSize());
         response.setSex(animal.getSex());
         response.setWeightKg(animal.getWeightKg());
@@ -43,6 +45,9 @@ public class AnimalMapper {
 
         if (animal.getUser() != null) {
             response.setUserId(animal.getUser().getId());
+            response.setOwnerName(animal.getUser().getName());
+            response.setOwnerCity(animal.getUser().getCity());
+            response.setOwnerState(animal.getUser().getState());
         }
 
         return response;
