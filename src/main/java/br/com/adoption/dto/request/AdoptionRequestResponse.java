@@ -1,4 +1,4 @@
-package br.com.adoption.dto.response;
+package br.com.adoption.dto.request;
 
 import br.com.adoption.entity.AdoptionRequestStatus;
 import io.swagger.v3.oas.annotations.media.Schema;

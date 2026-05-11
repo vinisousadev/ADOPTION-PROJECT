@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/notifications/unread-count").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/notifications/*/read").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/notifications/read-all").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/adoption-requests/*/messages").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/adoption-requests/*/messages").authenticated()
+
 
                         .requestMatchers(HttpMethod.PUT, "/users/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/users/*").authenticated()

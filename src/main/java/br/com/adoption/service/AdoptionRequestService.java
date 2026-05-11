@@ -1,7 +1,7 @@
 package br.com.adoption.service;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.response.AdoptionRequestResponse;
+import br.com.adoption.dto.request.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

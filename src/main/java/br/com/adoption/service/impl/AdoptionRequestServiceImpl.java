@@ -1,7 +1,7 @@
 package br.com.adoption.service.impl;
 
 import br.com.adoption.dto.request.CreateAdoptionRequest;
-import br.com.adoption.dto.response.AdoptionRequestResponse;
+import br.com.adoption.dto.request.AdoptionRequestResponse;
 import br.com.adoption.entity.AdoptionRequest;
 import br.com.adoption.entity.AdoptionRequestStatus;
 import br.com.adoption.entity.Animal;
